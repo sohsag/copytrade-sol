@@ -1,0 +1,29 @@
+{
+  "name": "copytrade",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node --esm index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@jup-ag/api": "^6.0.24",
+    "@solana/web3.js": "^1.95.1",
+    "axios": "^1.7.2",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "helius-sdk": "^1.0.15",
+    "node-fetch": "^3.3.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}
