@@ -141,6 +141,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             // Set this manually so that the default is skipped
             maxRetries: 0,
         });
+
         let numberOfRetries = 0;
         confirmedTx = null;
         while (!confirmedTx) {
@@ -188,6 +189,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
         await jupiterTransact(inputMint, outputMint, inputAmount, config)
         return;
     }
+
 
     // TODO: Check transaction if it is not failed else retry
 
