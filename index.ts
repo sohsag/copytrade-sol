@@ -1,164 +1,155 @@
-import * as fs from 'fs/promises';
-import {Connection} from "@solana/web3.js";
 
-import {Helius} from "helius-sdk";
-import {Config} from "./interfaces/Config";
-import WebSocket from 'ws';
+import input from '@inquirer/input';
+import number from '@inquirer/number';
+import {copyTrade} from "./copyTrade.ts"
+import fs from 'node:fs';
+import path from 'path';
 
-import {jupiterTransact} from './jupiterTransact.ts';
-import {getCurrentLocalTime, delay} from './utils.ts';
-import axios from "axios";
+const mainMenuString  = "" +
+    "███████╗████████╗ █████╗ ██████╗ ███████╗\n" +
+    "██╔════╝╚══██╔══╝██╔══██╗██╔══██╗╚══███╔╝\n" +
+    "███████╗   ██║   ███████║██████╔╝  ███╔╝ \n" +
+    "╚════██║   ██║   ██╔══██║██╔══██╗ ███╔╝  \n" +
+    "███████║   ██║   ██║  ██║██║  ██║███████╗\n" +
+    "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════ \n"
 
+const copyTradeString = "" +
+    " ██████╗ ██████╗ ██████╗ ██╗   ██╗    ████████╗██████╗  █████╗ ██████╗ ███████╗\n" +
+    "██╔════╝██╔═══██╗██╔══██╗╚██╗ ██╔╝    ╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔════╝\n" +
+    "██║     ██║   ██║██████╔╝ ╚████╔╝        ██║   ██████╔╝███████║██║  ██║█████╗  \n" +
+    "██║     ██║   ██║██╔═══╝   ╚██╔╝         ██║   ██╔══██╗██╔══██║██║  ██║██╔══╝  \n" +
+    "╚██████╗╚██████╔╝██║        ██║          ██║   ██║  ██║██║  ██║██████╔╝███████╗\n" +
+    " ╚═════╝ ╚═════╝ ╚═╝        ╚═╝          ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝\n" +
+    "                                                                               "
 
-async function readFile(): Promise<Config> {
-    try {
-        const data = await fs.readFile("config.json", "utf8");
-        return JSON.parse(data);
-    } catch (err) {
-        console.error('Error reading or parsing file:', err);
-        throw err;
-    }
-}
+const migrationSnipeString = "" +
+    "███╗   ███╗██╗ ██████╗ ██████╗  █████╗ ████████╗██╗ ██████╗ ███╗   ██╗\n" +
+    "████╗ ████║██║██╔════╝ ██╔══██╗██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║\n" +
+    "██╔████╔██║██║██║  ███╗██████╔╝███████║   ██║   ██║██║   ██║██╔██╗ ██║\n" +
+    "██║╚██╔╝██║██║██║   ██║██╔══██╗██╔══██║   ██║   ██║██║   ██║██║╚██╗██║\n" +
+    "██║ ╚═╝ ██║██║╚██████╔╝██║  ██║██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║\n" +
+    "╚═╝     ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝\n" +
+    "                                                                      "
 
-function decodeBuffer(websocketData: WebSocket.Data) {
-    let buffer: string;
-    if (typeof websocketData === 'string') {
-        buffer = websocketData;
-    } else if (websocketData instanceof Buffer) {
-        buffer = websocketData.toString('utf-8');
-    } else if (websocketData instanceof ArrayBuffer) {
-        buffer = Buffer.from(websocketData).toString('utf-8');
-    } else {
-        buffer = Buffer.concat(websocketData).toString('utf-8');
-    }
-    return JSON.parse(buffer)
-}
+async function login() {
 
-function getSwapDetails(swapDetails: any): [number, number, string, string] {
-    let inputAmount = swapDetails.nativeInput ?
-        swapDetails.nativeInput.amount : swapDetails.tokenInputs[0].rawTokenAmount
-
-    let outputAmount = swapDetails.nativeOutput ?
-        swapDetails.nativeOutput.amount : swapDetails.tokenOutputs[0].amount
-
-    let inputMint = swapDetails.nativeInput ?
-        "So11111111111111111111111111111111111111112" : swapDetails.tokenInputs[0].mint
-
-    let outputMint = swapDetails.nativeOutput ?
-        "So11111111111111111111111111111111111111112" : swapDetails.tokenOutputs[0].mint
-    return [inputAmount, outputAmount, inputMint, outputMint]
-}
-
-function startPing(ws: WebSocket) {
-    setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.ping();
-            console.log(`[${getCurrentLocalTime()}] Listening for transactions`);
-        }
-    }, 30000); // Ping every 30 seconds
 }
 
 async function main() {
-    try {
-        const settings = await readFile();
-        console.log(`[${getCurrentLocalTime()}] Copying the following wallets`)
-        const helius = new Helius(settings.helius_api_key)
-        for (let wallet of settings.wallets_to_track) {
-            console.log(wallet)
-        }
-        const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${settings.helius_api_key}`)
-        const rpc_connection = `wss://mainnet.helius-rpc.com/?api-key=${settings.helius_api_key}`
-        let socket = new WebSocket(rpc_connection)
-        // Connection opened
-        socket.on('open', () => {
-            console.log(`[${getCurrentLocalTime()}] Connected`);
-            for (let wallet of settings['wallets_to_track']) {
-                let data = {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "logsSubscribe",
-                    "params": [
-                        {
-                            "mentions": [wallet]
-                        },
-                        {
-                            "commitment": "confirmed"
+    clear()
+
+
+
+    const opt1 = "1. Copy trade"
+    const opt2 = "2. Migration snipe"
+
+    console.log(mainMenuString);
+    console.log(opt1)
+    console.log(opt2 + "\n")
+    const choice = await number({ message: 'Select option ', min: 1, max:2 } );
+    switch (choice) {
+        case 1:
+            clear()
+            console.log(copyTradeString)
+            console.log("1. Use previous settings (If this is the first time press 2)")
+            console.log("2. New settings")
+            console.log("3. Go back to main menu \n")
+            const choice1 = await number({ message: 'Select option ', min: 1, max:3 } );
+            switch (choice1) {
+                case 1:
+                    clear()
+                    return await copyTrade()
+                case 2:
+                    const private_key = await input({ message: 'Enter private key' });
+                    process.stdout.write("")
+
+                    let wallets_to_track = []
+                    let wallet;
+                    do {
+                        wallet = await input({ message: 'Enter wallet to copy trade. When finished type 0' });
+                        process.stdout.write("")
+                        if (wallet !== '0') wallets_to_track.push(wallet);
+                    } while (wallet !== '0');
+                    const helius_api_key = await input({ message: 'Enter helius api key' });
+                    process.stdout.write("")
+                    const shyft_api_key = await input({message: 'Enter shyft api key' });
+                    process.stdout.write("")
+                    const slippage = await number({ message: 'Enter slippage (0-100)', min: 0, max: 100 });
+                    process.stdout.write("")
+                    const priority_fee = await number({ message: 'Enter priority fee in SOL' });
+                    process.stdout.write("")
+                    const amount = await number({ message: 'Enter amount per buy in SOL' });
+                    process.stdout.write("")
+                    const webhook = await input({ message: 'Enter discord webhook' });
+                    process.stdout.write("")
+                    let currentDir = process.cwd();
+                    const filePath = path.join(currentDir, 'config2.json');
+                    let config = {
+                        "private_key": private_key,
+                        "wallets_to_track": wallets_to_track,
+                        "helius_api_key": helius_api_key,
+                        "shyft_api_key": shyft_api_key,
+                        "slippage": slippage,
+                        "priority_fee": priority_fee,
+                        "amount": amount,
+                        "webhook": webhook
+                    }
+                    fs.writeFile(filePath, JSON.stringify(config, null, 4), (err) => {
+                        if (err) {
+                            return console.error('Error writing file:', err);
                         }
-                    ]
-                }
-                socket.send(JSON.stringify(data));
+                        console.log('File has been written successfully. \n');
+                    })
+                    clear()
+                    console.log("1. Start copy trading")
+                    console.log("2. Go back to main menu")
+                    const choice1 = await number({ message: 'Select option ', min: 1, max:2 } );
+                    switch (choice1) {
+                        case 1:
+                            return await copyTrade()
+
+                        case 2:
+                            return await main()
+
+                    }
+                    break
+                case 3:
+                    return await main()
+
+
             }
-
-            startPing(socket)
-
-        });
-
-
-        const signatureSet = new Set<string>();
-        // Listen for messages from the server
-        socket.on('message', async (websocketData) => {
-            let message = decodeBuffer(websocketData);
-            if (!message.params || !message.params.result) return
-
-            const signature = message.params.result.value.signature
-
-
-            if (!signatureSet.has(signature)) {
-                signatureSet.add(signature)
-                let response = await axios.post(`https://api.helius.xyz/v0/transactions/?api-key=${settings.helius_api_key}`,
-                    JSON.stringify({'transactions': [signature]}))
-                while (response.data.length === 0) {
-                    response = await axios.post(`https://api.helius.xyz/v0/transactions/?api-key=${settings.helius_api_key}`,
-                        JSON.stringify({'transactions': [signature]}))
-                    await delay(1000)
-                }
-                signatureSet.delete(signature)
-                let data = response.data[0];
-                if (data.type !== "SWAP") return
-                console.log(`[${getCurrentLocalTime()}] Incoming transaction: https://solscan.io/tx/${signature}`)
-
-                let [inputAmount, outputAmount, inputMint, outputMint] = getSwapDetails(data.events.swap)
-                await jupiterTransact(inputMint, outputMint, inputAmount, settings)
+            break
+        case 2:
+            clear()
+            console.log(migrationSnipeString)
+            console.log("Not implemented yet \n")
+            console.log("1. Go back to main menu\n")
+            const choice = await number({ message: 'Select option ', min: 1, max: 1 } );
+            if (choice === 1) {
+                clear()
+                return await main()
             }
+            break
+        default:
+            console.log("Not valid option")
+            break
+    }
 
+}
 
-
-
-
-
-
-
-
-
-
-
-            /*
-            let data = response.data[0];
-            if (data.type !== "SWAP") return
-
-
-            let [inputAmount, outputAmount, inputMint, outputMint] = getSwapDetails(data.events.swap)
-            await jupiterTransact(inputMint, outputMint, inputAmount, settings)
-            */
-
-        });
-
-        // Handle connection errors
-        socket.on('error', (error) => {
-            console.error('WebSocket error:', error);
-        });
-
-        // Handle connection close
-        socket.on('close', () => {
-            console.log('Disconnected from WebSocket server');
-            socket = new WebSocket(rpc_connection)
-        });
-        // const connection = new Connection()
-        // const connection = new Connection()
-        // Add your additional logic here
-    } catch (err) {
-        console.error('Error:', err);
+function clear() {
+    let lines = process.stdout.getWindowSize()[1];
+    for(let i = 0; i < lines; i++) {
+        console.log('\r\n');
     }
 }
 
-main();
+
+
+
+
+main()
+
+
+
+
