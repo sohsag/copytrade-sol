@@ -1,14 +1,16 @@
-import fs from 'fs/promises';
-import web3, {Connection, GetVersionedTransactionConfig, VersionedTransaction} from "@solana/web3.js";
-import WebSocket from "ws";
-import { Helius } from "helius-sdk";
-import {Config} from "./interfaces/Config";
+import * as fs from 'fs/promises';
+import {Connection} from "@solana/web3.js";
 
-import { jupiterTransact } from './jupiterTransact.ts';
+import {Helius} from "helius-sdk";
+import {Config} from "./interfaces/Config";
+import WebSocket from 'ws';
+
+import {jupiterTransact} from './jupiterTransact.ts';
+import {getCurrentLocalTime, delay} from './utils.ts';
 import axios from "axios";
 
 
-async function readFile():Promise<Config> {
+async function readFile(): Promise<Config> {
     try {
         const data = await fs.readFile("config.json", "utf8");
         return JSON.parse(data);
@@ -16,10 +18,6 @@ async function readFile():Promise<Config> {
         console.error('Error reading or parsing file:', err);
         throw err;
     }
-}
-
-function delay(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
 function decodeBuffer(websocketData: WebSocket.Data) {
@@ -51,10 +49,19 @@ function getSwapDetails(swapDetails: any): [number, number, string, string] {
     return [inputAmount, outputAmount, inputMint, outputMint]
 }
 
+function startPing(ws: WebSocket) {
+    setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.ping();
+            console.log(`[${getCurrentLocalTime()}] Listening for transactions`);
+        }
+    }, 30000); // Ping every 30 seconds
+}
+
 async function main() {
     try {
         const settings = await readFile();
-        console.log("Copying the following wallets")
+        console.log(`[${getCurrentLocalTime()}] Copying the following wallets`)
         const helius = new Helius(settings.helius_api_key)
         for (let wallet of settings.wallets_to_track) {
             console.log(wallet)
@@ -64,7 +71,7 @@ async function main() {
         let socket = new WebSocket(rpc_connection)
         // Connection opened
         socket.on('open', () => {
-            console.log('Connected');
+            console.log(`[${getCurrentLocalTime()}] Connected`);
             for (let wallet of settings['wallets_to_track']) {
                 let data = {
                     "jsonrpc": "2.0",
@@ -84,21 +91,9 @@ async function main() {
 
             startPing(socket)
 
-
-
-            // You can send a message to the server if needed
-            // socket.send(JSON.stringify({ message: 'Hello Server!' }));
-
         });
 
-        function startPing(ws: WebSocket) {
-            setInterval(() => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.ping();
-                    console.log("Listening for transactions");
-                }
-            }, 30000); // Ping every 30 seconds
-        }
+
         const signatureSet = new Set<string>();
         // Listen for messages from the server
         socket.on('message', async (websocketData) => {
@@ -120,7 +115,7 @@ async function main() {
                 signatureSet.delete(signature)
                 let data = response.data[0];
                 if (data.type !== "SWAP") return
-                console.log(`Incoming transaction: https://solscan.io/tx/${signature}`)
+                console.log(`[${getCurrentLocalTime()}] Incoming transaction: https://solscan.io/tx/${signature}`)
 
                 let [inputAmount, outputAmount, inputMint, outputMint] = getSwapDetails(data.events.swap)
                 await jupiterTransact(inputMint, outputMint, inputAmount, settings)

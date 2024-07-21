@@ -1,5 +1,5 @@
-import path from "path";
-import fs from "fs/promises";
+import * as path from "path";
+import * as fs from 'fs/promises';
 
 export function delay(ms: number) {
     return new Promise( resolve => setTimeout(resolve, ms) );
@@ -16,7 +16,7 @@ export function getCurrentLocalTime(): string {
 
 export async function logToFile(message: string) {
     const logFile = path.join(__dirname, 'errorLogs.txt');
-    const timestamp = getCurrentLocalTime()
+    const timestamp = getCurrentLocalTime();
     const logMessage = `${timestamp} - ${message}\n`;
 
     try {

@@ -1,8 +1,9 @@
 
-import web3, { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
 import axios from "axios";
-import {Config} from "./interfaces/Config";
+import {Config} from "./interfaces/Config.ts";
 import {delay, getCurrentLocalTime, logToFile} from "./utils.ts"
 
 
@@ -16,7 +17,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
     const SWAP_TOKEN_FROM = inputMint;
     const SWAP_TOKEN_TO = outputMint;
     const SWAP_AMOUNT = SWAP_TOKEN_FROM === "So11111111111111111111111111111111111111112" ?
-        config.amount * LAMPORTS_PER_SOL : inputAmount // If we are swapping from sol to whatever, then we use the amount given from config
+        config.amount * LAMPORTS_PER_SOL : inputAmount; // If we are swapping from sol to whatever, then we use the amount given from config
     const COMMITMENT_LEVEL = "confirmed";
     const PRIORITY_FEE_LAMPORTS = Math.trunc(LAMPORTS_PER_SOL * config.priority_fee);
     const TX_RETRY_INTERVAL = 200; // TODO: How many times per second can i call?
@@ -140,7 +141,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             // Set this manually so that the default is skipped
             maxRetries: 0,
         });
-
+        let numberOfRetries = 0;
         confirmedTx = null;
         while (!confirmedTx) {
             confirmedTx = await Promise.race([
@@ -154,7 +155,16 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             if (confirmedTx) {
                 break;
             }
+            if (numberOfRetries === 150) {
+                throw new Error(
+                    "Too many retries. Fetching data again"
+                );
+            }
+            numberOfRetries++;
 
+            // TODO: retry logic
+            // Tænker vi kan bare sige at den skal retry 60 gange og hvis den nogenside stopper kaster vi en error
+            // Og så bliver den catched on og vi kører igen
 
 
             await connection.sendRawTransaction(tx.serialize(), {
@@ -179,10 +189,14 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
         return;
     }
 
+    // TODO: Check transaction if it is not failed else retry
+
     console.log(`[${getCurrentLocalTime()}] Transaction successful`);
     console.log(
         `[${getCurrentLocalTime()}] https://solscan.io/tx/${txSignature}`
     );
+
+    // TODO: Confirmation on discord and
 
 
 
