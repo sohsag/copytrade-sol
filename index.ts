@@ -1,17 +1,18 @@
-
 import input from '@inquirer/input';
 import number from '@inquirer/number';
-import {copyTrade} from "./copyTrade.ts"
+import {copyTrade} from "./copyTrade"
 import fs from 'node:fs';
 import path from 'path';
+import axios from "axios";
+import {machineId} from 'node-machine-id';
 
 const mainMenuString  = "" +
-    "███████╗████████╗ █████╗ ██████╗ ███████╗\n" +
-    "██╔════╝╚══██╔══╝██╔══██╗██╔══██╗╚══███╔╝\n" +
-    "███████╗   ██║   ███████║██████╔╝  ███╔╝ \n" +
-    "╚════██║   ██║   ██╔══██║██╔══██╗ ███╔╝  \n" +
-    "███████║   ██║   ██║  ██║██║  ██║███████╗\n" +
-    "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════ \n"
+    "███████╗████████╗ █████╗ ██████╗ \n" +
+    "██╔════╝╚══██╔══╝██╔══██╗██╔══██╗\n" +
+    "███████╗   ██║   ███████║██████╔╝\n" +
+    "╚════██║   ██║   ██╔══██║██╔══██╗\n" +
+    "███████║   ██║   ██║  ██║██║  ██║\n" +
+    "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝\n"
 
 const copyTradeString = "" +
     " ██████╗ ██████╗ ██████╗ ██╗   ██╗    ████████╗██████╗  █████╗ ██████╗ ███████╗\n" +
@@ -32,20 +33,34 @@ const migrationSnipeString = "" +
     "                                                                      "
 
 async function login() {
+    let token = await input({ message: 'Enter license key' });
+    let mid = await machineId();
+    let data = {'c': mid, 'token': token}
+    try {
+        let response = await axios.post("https://artistic-locust-sincerely.ngrok-free.app/verify_license", data);
+        if (response.status === 200) {
+            await main()
+        } else {
+            console.log("Invalid key")
+        }
+    } catch (error) {
+        console.log("Invalid key")
+    }
+
 
 }
 
 async function main() {
     clear()
 
-
-
     const opt1 = "1. Copy trade"
     const opt2 = "2. Migration snipe"
+    const opt3 = "3. Find good wallets"
 
     console.log(mainMenuString);
     console.log(opt1)
-    console.log(opt2 + "\n")
+    console.log(opt2)
+    console.log(opt3 + "\n")
     const choice = await number({ message: 'Select option ', min: 1, max:2 } );
     switch (choice) {
         case 1:
@@ -124,12 +139,39 @@ async function main() {
             console.log(migrationSnipeString)
             console.log("Not implemented yet \n")
             console.log("1. Go back to main menu\n")
-            const choice = await number({ message: 'Select option ', min: 1, max: 1 } );
-            if (choice === 1) {
+            let choice2 = await number({ message: 'Select option ', min: 1, max: 1 } );
+            if (choice2 === 1) {
                 clear()
                 return await main()
             }
             break
+        case 3:
+            clear()
+            console.log("Find wallets\n")
+            console.log("Not implemented yet \n")
+            console.log("1. Go back to main menu\n")
+            let choice3 = await number({ message: 'Select option ', min: 1, max: 1 } );
+            if (choice3 === 1) {
+                clear()
+                return await main()
+            }
+            break
+
+            /*
+            const helius_api_key = await input({ message: 'Enter helius api key' });
+            process.stdout.write("")
+            const timeframe = await number({ message: 'Enter time frame in days', min: 1, max: 30 });
+            process.stdout.write("")
+            const winrate = await number({ message: 'Enter minimum winrate in %', min: 1, max: 100 });
+            process.stdout.write("")
+            const minimumAmountOfTrades = await number({ message: 'Enter minimum amount of trades', min: 1 });
+            process.stdout.write("")
+            const maximumAmountOfTrades = await number({ message: 'Enter maximum amount of trades', min: 1 });
+            process.stdout.write("")
+            const minimumPnl = await number({ message: 'Enter minimum Pnl in $', min: 1 });
+            process.stdout.write("")
+            */
+
         default:
             console.log("Not valid option")
             break
@@ -148,7 +190,7 @@ function clear() {
 
 
 
-main()
+login()
 
 
 

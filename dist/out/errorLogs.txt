@@ -1,0 +1,7 @@
+2024-19:42:21 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}
+2024-19:42:24 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}
+2024-19:42:34 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}
+2024-19:42:37 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}
+2024-19:42:40 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}
+2024-20:22:00 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}
+2024-20:22:04 - Error Error: Transaction simulation failed with error {"InstructionError":[3,{"Custom":1}]}

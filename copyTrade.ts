@@ -5,8 +5,8 @@ import {Helius} from "helius-sdk";
 import {Config} from "./interfaces/Config";
 import WebSocket from 'ws';
 
-import {jupiterTransact} from './jupiterTransact.ts';
-import {getCurrentLocalTime, delay} from './utils.ts';
+import {jupiterTransact} from './jupiterTransact';
+import {getCurrentLocalTime, delay} from './utils';
 import axios from "axios";
 
 
@@ -62,11 +62,9 @@ export async function copyTrade() {
     try {
         const settings = await readFile();
         console.log(`[${getCurrentLocalTime()}] Copying the following wallets`)
-        const helius = new Helius(settings.helius_api_key)
         for (let wallet of settings.wallets_to_track) {
             console.log(wallet)
         }
-        const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${settings.helius_api_key}`)
         const rpc_connection = `wss://mainnet.helius-rpc.com/?api-key=${settings.helius_api_key}`
         let socket = new WebSocket(rpc_connection)
         // Connection opened
@@ -118,7 +116,7 @@ export async function copyTrade() {
                 console.log(`[${getCurrentLocalTime()}] Incoming transaction: https://solscan.io/tx/${signature}`)
 
                 let [inputAmount, outputAmount, inputMint, outputMint] = getSwapDetails(data.events.swap)
-                await jupiterTransact(inputMint, outputMint, inputAmount, settings)
+                await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings)
             }
 
 

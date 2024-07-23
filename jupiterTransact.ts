@@ -3,12 +3,12 @@ import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from "@solana/web3
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
 import axios from "axios";
-import {Config} from "./interfaces/Config.ts";
-import {delay, getCurrentLocalTime, logToFile} from "./utils.ts"
+import {Config} from "./interfaces/Config";
+import {delay, getCurrentLocalTime, logToFile} from "./utils"
 
 
 
-export async function jupiterTransact(inputMint: string, outputMint: string, inputAmount: number, config: Config) {
+export async function jupiterTransact(inputMint: string, outputMint: string, inputAmount: number, outputAmount: number, config: Config) {
     const RPC_ENDPOINT = `https://rpc.shyft.to?api_key=${config.shyft_api_key}`;
     const USER_KEYPAIR = web3.Keypair.fromSecretKey(
         bs58.decode(config.private_key),
@@ -186,19 +186,36 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
     if (!confirmedTx) {
         console.log(`[${getCurrentLocalTime()}] Transaction failed`);
         await delay(1000)
-        await jupiterTransact(inputMint, outputMint, inputAmount, config)
+        await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, config)
         return;
     }
 
+    let status = await connection.getSignatureStatus(txSignature as string);
+    if (status.value?.err) {
+        console.log("Slippage was exceeded")
+        await delay(5000);
+        return await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, config);
+    }
 
-    // TODO: Check transaction if it is not failed else retry
+
 
     console.log(`[${getCurrentLocalTime()}] Transaction successful`);
     console.log(
         `[${getCurrentLocalTime()}] https://solscan.io/tx/${txSignature}`
     );
+    let buy_or_sell = inputMint === "So11111111111111111111111111111111111111112" ? ["BOUGHT", config.amount, outputMint] : ["SOLD", Math.trunc(outputAmount/LAMPORTS_PER_SOL), inputMint];
 
-    // TODO: Confirmation on discord and
+
+
+    await axios.post(config.webhook, {
+        "username": "star",
+        "embeds": [
+            {
+                "title": `${buy_or_sell[0]} ${buy_or_sell[1]} SOL of ${buy_or_sell[2]}`,
+            },
+
+        ],
+    })
 
 
 
