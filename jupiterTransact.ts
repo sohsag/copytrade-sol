@@ -3,8 +3,8 @@ import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from "@solana/web3
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
 import axios from "axios";
-import {Config} from "./interfaces/Config";
-import {delay, getCurrentLocalTime, logToFile} from "./utils"
+import {Config} from "./interfaces/Config.ts";
+import {delay, getCurrentLocalTime, logToFile, SOL} from "./utils.ts"
 
 
 
@@ -16,7 +16,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
 
     const SWAP_TOKEN_FROM = inputMint;
     const SWAP_TOKEN_TO = outputMint;
-    const SWAP_AMOUNT = SWAP_TOKEN_FROM === "So11111111111111111111111111111111111111112" ?
+    const SWAP_AMOUNT = SWAP_TOKEN_FROM === SOL ?
         config.amount * LAMPORTS_PER_SOL : inputAmount; // If we are swapping from sol to whatever, then we use the amount given from config
     const COMMITMENT_LEVEL = "confirmed";
     const PRIORITY_FEE_LAMPORTS = Math.trunc(LAMPORTS_PER_SOL * config.priority_fee);
@@ -65,7 +65,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
         swapApiResult = await axios.post(`https://quote-api.jup.ag/v6/swap`, {
             quoteResponse: quoteResponse,
             userPublicKey: USER_KEYPAIR.publicKey.toBase58(),
-            wrapAndUnwrapSol: true,
+            wrapAndUnwrapSol: false,
 
             // Setting this to `true` allows the endpoint to set the dynamic compute unit limit as required by the transaction
             dynamicComputeUnitLimit: true,
@@ -203,7 +203,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
     console.log(
         `[${getCurrentLocalTime()}] https://solscan.io/tx/${txSignature}`
     );
-    let buy_or_sell = inputMint === "So11111111111111111111111111111111111111112" ? ["BOUGHT", config.amount, outputMint] : ["SOLD", Math.trunc(outputAmount/LAMPORTS_PER_SOL), inputMint];
+    let buy_or_sell = inputMint === SOL ? ["BOUGHT", config.amount, outputMint] : ["SOLD", Math.trunc(outputAmount/LAMPORTS_PER_SOL), inputMint];
 
 
 

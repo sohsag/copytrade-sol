@@ -1,6 +1,8 @@
 import * as path from "path";
 import * as fs from 'fs/promises';
 
+export const SOL = "So11111111111111111111111111111111111111112";
+
 export function delay(ms: number) {
     return new Promise( resolve => setTimeout(resolve, ms) );
 }

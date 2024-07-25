@@ -1,18 +1,20 @@
 import * as fs from 'fs/promises';
 import {Connection} from "@solana/web3.js";
-
+import AssetsByOwnerRequest from 'helius-sdk/dist/src/types/das-types'
 import {Helius} from "helius-sdk";
-import {Config} from "./interfaces/Config";
+import {Config} from "./interfaces/Config.ts";
 import WebSocket from 'ws';
 
-import {jupiterTransact} from './jupiterTransact';
-import {getCurrentLocalTime, delay} from './utils';
+import {jupiterTransact} from './jupiterTransact.ts';
+import {getCurrentLocalTime, delay, SOL} from './utils.ts';
 import axios from "axios";
+import * as web3 from "@solana/web3.js";
+import bs58 from "bs58";
 
 
-async function readFile(): Promise<Config> {
+async function readFile(fileName: string): Promise<Config> {
     try {
-        const data = await fs.readFile("config.json", "utf8");
+        const data = await fs.readFile(`${fileName}`, "utf8");
         return JSON.parse(data);
     } catch (err) {
         console.error('Error reading or parsing file:', err);
@@ -42,10 +44,10 @@ function getSwapDetails(swapDetails: any): [number, number, string, string] {
         swapDetails.nativeOutput.amount : swapDetails.tokenOutputs[0].amount
 
     let inputMint = swapDetails.nativeInput ?
-        "So11111111111111111111111111111111111111112" : swapDetails.tokenInputs[0].mint
+        SOL : swapDetails.tokenInputs[0].mint
 
     let outputMint = swapDetails.nativeOutput ?
-        "So11111111111111111111111111111111111111112" : swapDetails.tokenOutputs[0].mint
+        SOL : swapDetails.tokenOutputs[0].mint
     return [inputAmount, outputAmount, inputMint, outputMint]
 }
 
@@ -58,13 +60,17 @@ function startPing(ws: WebSocket) {
     }, 30000); // Ping every 30 seconds
 }
 
-export async function copyTrade() {
+export async function copyTrade(fileName: string) {
     try {
-        const settings = await readFile();
+        const settings = await readFile(fileName);
         console.log(`[${getCurrentLocalTime()}] Copying the following wallets`)
         for (let wallet of settings.wallets_to_track) {
             console.log(wallet)
         }
+        const keypair = web3.Keypair.fromSecretKey(
+            bs58.decode(settings.private_key),
+        );
+        const helius = new Helius(settings.helius_api_key)
         const rpc_connection = `wss://mainnet.helius-rpc.com/?api-key=${settings.helius_api_key}`
         let socket = new WebSocket(rpc_connection)
         // Connection opened
@@ -114,20 +120,23 @@ export async function copyTrade() {
                 let data = response.data[0];
                 if (data.type !== "SWAP") return
                 console.log(`[${getCurrentLocalTime()}] Incoming transaction: https://solscan.io/tx/${signature}`)
+                // check at denne sig også er confirmed og ikke har error
+                let checkSignature = await helius.connection.getSignatureStatus(signature)
+                if (checkSignature.value?.err) return;
+                if (!data.events.swap) return
 
                 let [inputAmount, outputAmount, inputMint, outputMint] = getSwapDetails(data.events.swap)
-                await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings)
+                let tokenBalance = await helius.rpc.getAssetsByOwner({ownerAddress: keypair.publicKey.toString(), page: 1} )
+                if (inputMint === SOL) {
+                    return await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings)
+                }
+
+                for (const item of tokenBalance.items) {
+                    if (item.id === inputMint)
+                        await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings);
+                }
+
             }
-
-
-
-
-
-
-
-
-
-
 
 
             /*
@@ -149,7 +158,8 @@ export async function copyTrade() {
         // Handle connection close
         socket.on('close', () => {
             console.log('Disconnected from WebSocket server');
-            socket = new WebSocket(rpc_connection)
+            console.log('Reconnecting...');
+            return copyTrade(fileName)
         });
         // const connection = new Connection()
         // const connection = new Connection()

@@ -1,10 +1,11 @@
 import input from '@inquirer/input';
 import number from '@inquirer/number';
-import {copyTrade} from "./copyTrade"
+import {copyTrade} from "./copyTrade.ts"
 import fs from 'node:fs';
 import path from 'path';
 import axios from "axios";
 import {machineId} from 'node-machine-id';
+import {delay} from "./utils.ts";
 
 const mainMenuString  = "" +
     "███████╗████████╗ █████╗ ██████╗ \n" +
@@ -32,8 +33,10 @@ const migrationSnipeString = "" +
     "╚═╝     ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝\n" +
     "                                                                      "
 
+const currentDir = process.cwd();
+
 async function login() {
-    let token = await input({ message: 'Enter license key' });
+    let token = await inputString("Enter license key")
     let mid = await machineId();
     let data = {'c': mid, 'token': token}
     try {
@@ -50,6 +53,119 @@ async function login() {
 
 }
 
+async function inputNumber(message: string, min?: number, max?: number, step = 1) {
+    const num = await number({ message: message, min: min, max: max, step: step});
+    process.stdout.write("")
+    if (typeof num === "undefined") {
+        console.log("Something went wrong, try again")
+        return await inputNumber(message, min, max, step)
+    }
+    return num
+}
+
+async function inputString(message: string) {
+    const str = await input({ message: message });
+    process.stdout.write("")
+    if (str.length === 0) {
+        console.log("Something went wrong, try again")
+        return await inputString(message)
+    }
+    return str.trim()
+}
+// Tænker at vi skal have alle configs i en liste der hedder copyTradeConfig
+// Så kan vi vælge 1. Use previous settings (If this is the first time press 2) som går i en anden menu
+// Og herinde skal den kunne vælge en af de configs som findes og liste dem alle op og så skal man så bruge tal alt efter
+// hvor mange der er.
+// så f.eks 1. config.json, 2. config2.json osv.
+// og vi får tallene ud fra længden af directory
+
+/*
+    Vi skal også have noget hvor man vælge hvilken plan er på for at få hurtigere rpc calls og om man kan bruge
+    jito tip
+ */
+
+async function selectFile(directory: string) {
+    clear()
+    const files = fs.readdirSync(path.join(currentDir, directory))
+    console.log("Choose one of the settings below \n")
+    for (let i = 0; i < files.length; i++) {
+        console.log(`${i+1}. ${files[i]}`);
+    }
+
+    let num = await inputNumber('Select setting', 1, files.length);
+    return path.join(currentDir, directory, files[num-1])
+
+}
+
+async function copyTradeMenu() {
+    clear()
+    console.log(copyTradeString)
+    console.log("1. Choose setting")
+    console.log("2. New setting")
+    console.log("3. Delete setting")
+    console.log("4. Go back to main menu \n")
+    switch (await inputNumber('Select option', 1, 4)) {
+        case 1:
+            let choiceOfFile = await selectFile("copyTradeSettings");
+            return await copyTrade(choiceOfFile)
+
+        case 2:
+            const private_key = await inputString('Enter private key')
+            let wallets_to_track = []
+            let wallet;
+            do {
+                wallet = await inputString("Enter wallet to copy trade. When finished type 0")
+                if (wallet !== '0') wallets_to_track.push(wallet);
+            } while (wallet !== '0');
+            const helius_api_key = await inputString("Enter helius api key")
+            const shyft_api_key = await inputString("Enter shyft api key")
+            const slippage = await inputNumber('Enter slippage (0-100)', 0, 100, 0.01)
+            const priority_fee = await inputNumber('Enter priority fee in SOL', undefined, undefined, 0.0001)
+            const amount = await inputNumber('Enter amount per buy in SOL', undefined, undefined, 0.0001)
+            const webhook = await inputString('Enter discord webhook')
+            const fileName = await inputString('Enter a name for this configuration')
+            const filePath = path.join(currentDir, "copyTradeSettings", `${fileName}.json`);
+            let config = {
+                "private_key": private_key,
+                "wallets_to_track": wallets_to_track,
+                "helius_api_key": helius_api_key,
+                "shyft_api_key": shyft_api_key,
+                "slippage": slippage,
+                "priority_fee": priority_fee,
+                "amount": amount,
+                "webhook": webhook
+            }
+            fs.writeFileSync(filePath, JSON.stringify(config, null, 4))
+            clear()
+            console.log("1. Start copy trading")
+            console.log("2. Go back to main menu")
+            switch (await inputNumber('Select option', 1, 2)) {
+                case 1:
+                    return await copyTrade(filePath)
+
+                case 2:
+                    return await main()
+            }
+            break
+        case 3:
+
+            let choiceOfFile2 = await selectFile("copyTradeSettings")
+            fs.rm(choiceOfFile2, (err) => {
+                if (err) {
+                    return console.error('Error writing file:', err);
+                }
+                console.log("Setting deleted")
+            });
+            await delay(1000)
+            return await copyTradeMenu();
+
+        case 4:
+            return await main()
+
+
+    }
+}
+
 async function main() {
     clear()
 
@@ -61,101 +177,27 @@ async function main() {
     console.log(opt1)
     console.log(opt2)
     console.log(opt3 + "\n")
-    const choice = await number({ message: 'Select option ', min: 1, max:2 } );
-    switch (choice) {
+
+    switch (await inputNumber('Select option ', 1,3)) {
         case 1:
-            clear()
-            console.log(copyTradeString)
-            console.log("1. Use previous settings (If this is the first time press 2)")
-            console.log("2. New settings")
-            console.log("3. Go back to main menu \n")
-            const choice1 = await number({ message: 'Select option ', min: 1, max:3 } );
-            switch (choice1) {
-                case 1:
-                    clear()
-                    return await copyTrade()
-                case 2:
-                    const private_key = await input({ message: 'Enter private key' });
-                    process.stdout.write("")
-
-                    let wallets_to_track = []
-                    let wallet;
-                    do {
-                        wallet = await input({ message: 'Enter wallet to copy trade. When finished type 0' });
-                        process.stdout.write("")
-                        if (wallet !== '0') wallets_to_track.push(wallet);
-                    } while (wallet !== '0');
-                    const helius_api_key = await input({ message: 'Enter helius api key' });
-                    process.stdout.write("")
-                    const shyft_api_key = await input({message: 'Enter shyft api key' });
-                    process.stdout.write("")
-                    const slippage = await number({ message: 'Enter slippage (0-100)', min: 0, max: 100 });
-                    process.stdout.write("")
-                    const priority_fee = await number({ message: 'Enter priority fee in SOL' });
-                    process.stdout.write("")
-                    const amount = await number({ message: 'Enter amount per buy in SOL' });
-                    process.stdout.write("")
-                    const webhook = await input({ message: 'Enter discord webhook' });
-                    process.stdout.write("")
-                    let currentDir = process.cwd();
-                    const filePath = path.join(currentDir, 'config2.json');
-                    let config = {
-                        "private_key": private_key,
-                        "wallets_to_track": wallets_to_track,
-                        "helius_api_key": helius_api_key,
-                        "shyft_api_key": shyft_api_key,
-                        "slippage": slippage,
-                        "priority_fee": priority_fee,
-                        "amount": amount,
-                        "webhook": webhook
-                    }
-                    fs.writeFile(filePath, JSON.stringify(config, null, 4), (err) => {
-                        if (err) {
-                            return console.error('Error writing file:', err);
-                        }
-                        console.log('File has been written successfully. \n');
-                    })
-                    clear()
-                    console.log("1. Start copy trading")
-                    console.log("2. Go back to main menu")
-                    const choice1 = await number({ message: 'Select option ', min: 1, max:2 } );
-                    switch (choice1) {
-                        case 1:
-                            return await copyTrade()
-
-                        case 2:
-                            return await main()
-
-                    }
-                    break
-                case 3:
-                    return await main()
-
-
-            }
+            await copyTradeMenu();
             break
         case 2:
             clear()
             console.log(migrationSnipeString)
             console.log("Not implemented yet \n")
             console.log("1. Go back to main menu\n")
-            let choice2 = await number({ message: 'Select option ', min: 1, max: 1 } );
-            if (choice2 === 1) {
-                clear()
-                return await main()
-            }
-            break
+            await inputNumber('Select option', 1, 1)
+            return await main()
+
+
         case 3:
             clear()
             console.log("Find wallets\n")
             console.log("Not implemented yet \n")
             console.log("1. Go back to main menu\n")
-            let choice3 = await number({ message: 'Select option ', min: 1, max: 1 } );
-            if (choice3 === 1) {
-                clear()
-                return await main()
-            }
-            break
+            await inputNumber('Select option', 1, 1)
+            return await main()
 
             /*
             const helius_api_key = await input({ message: 'Enter helius api key' });
