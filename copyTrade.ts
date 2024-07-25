@@ -116,6 +116,7 @@ export async function copyTrade(fileName: string) {
                         JSON.stringify({'transactions': [signature]}))
                     await delay(1000)
                 }
+                // helius.connection.getParsedTransaction() kan måske optimeres med
                 signatureSet.delete(signature)
                 let data = response.data[0];
                 if (data.type !== "SWAP") return
@@ -129,7 +130,7 @@ export async function copyTrade(fileName: string) {
                 if (inputMint === SOL) {
                     return await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings)
                 }
-                let tokenBalance = await helius.rpc.searchAssets({page: 1, ownerAddress: keypair.publicKey.toString(), tokenType: 'Fungible'})
+                let tokenBalance = await helius.rpc.searchAssets({page: 1, ownerAddress: keypair.publicKey.toString(), tokenType: 'fungible'})
                 for (const item of tokenBalance.items) {
                     if (item.id === inputMint) {
                         if (typeof item.token_info?.balance === 'undefined') return;
