@@ -133,7 +133,7 @@ export async function copyTrade(fileName: string) {
                 for (const item of tokenBalance.items) {
                     if (item.id === inputMint) {
                         if (typeof item.token_info?.balance === 'undefined') return;
-
+                        // We could check what holder holds and sell the same % of ours token in similar way.
                         await jupiterTransact(inputMint, outputMint, item.token_info?.balance as number, outputAmount, settings);
                     }
 
