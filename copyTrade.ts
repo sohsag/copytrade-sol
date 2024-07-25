@@ -126,14 +126,17 @@ export async function copyTrade(fileName: string) {
                 if (!data.events.swap) return
 
                 let [inputAmount, outputAmount, inputMint, outputMint] = getSwapDetails(data.events.swap)
-                let tokenBalance = await helius.rpc.getAssetsByOwner({ownerAddress: keypair.publicKey.toString(), page: 1} )
                 if (inputMint === SOL) {
                     return await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings)
                 }
-
+                let tokenBalance = await helius.rpc.searchAssets({page: 1, ownerAddress: keypair.publicKey.toString(), tokenType: 'Fungible'})
                 for (const item of tokenBalance.items) {
-                    if (item.id === inputMint)
-                        await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, settings);
+                    if (item.id === inputMint) {
+                        if (typeof item.token_info?.balance === 'undefined') return;
+
+                        await jupiterTransact(inputMint, outputMint, item.token_info?.balance as number, outputAmount, settings);
+                    }
+
                 }
 
             }
