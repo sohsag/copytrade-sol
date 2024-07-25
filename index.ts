@@ -91,8 +91,10 @@ async function selectFile(directory: string) {
     for (let i = 0; i < files.length; i++) {
         console.log(`${i+1}. ${files[i]}`);
     }
+    console.log()
 
     let num = await inputNumber('Select setting', 1, files.length);
+    clear()
     return path.join(currentDir, directory, files[num-1])
 
 }
@@ -107,6 +109,7 @@ async function copyTradeMenu() {
     switch (await inputNumber('Select option', 1, 4)) {
         case 1:
             let choiceOfFile = await selectFile("copyTradeSettings");
+
             return await copyTrade(choiceOfFile)
 
         case 2:
