@@ -59,9 +59,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             `[${getCurrentLocalTime()}] Fetching swap transaction`
         );
 
-        // Get swap transaction
-        // For priority fees and CUs, refer the following code and
-        // https://station.jup.ag/docs/apis/swap-api#setting-priority-fee-for-your-transaction
+
         swapApiResult = await axios.post(`https://quote-api.jup.ag/v6/swap`, {
             quoteResponse: quoteResponse,
             userPublicKey: USER_KEYPAIR.publicKey.toBase58(),
@@ -70,7 +68,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             // Setting this to `true` allows the endpoint to set the dynamic compute unit limit as required by the transaction
             dynamicComputeUnitLimit: true,
 
-            // Setting the priority fees. This can be `auto` or lamport numeric value
+
             prioritizationFeeLamports: PRIORITY_FEE_LAMPORTS,
         });
 
@@ -120,7 +118,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             `[${getCurrentLocalTime()}] Subscribing to transaction confirmation`
         );
 
-        // confirmTransaction throws error, handle it
+
         confirmTransactionPromise = connection.confirmTransaction(
             {
                 signature: txSignature,
@@ -134,11 +132,9 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             `[${getCurrentLocalTime()}] Sending Transaction ${txSignature}`
         );
         await connection.sendRawTransaction(tx.serialize(), {
-            // Skipping preflight i.e. tx simulation by RPC as we simulated the tx above
-            // This allows Triton RPCs to send the transaction through multiple pathways for the fastest delivery
+
             skipPreflight: true,
-            // Setting max retries to 0 as we are handling retries manually
-            // Set this manually so that the default is skipped
+
             maxRetries: 0,
         });
 
@@ -163,17 +159,13 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
             }
             numberOfRetries++;
 
-            // TODO: retry logic
-            // Tænker vi kan bare sige at den skal retry 60 gange og hvis den nogenside stopper kaster vi en error
-            // Og så bliver den catched on og vi kører igen
+
 
 
             await connection.sendRawTransaction(tx.serialize(), {
-                // Skipping preflight i.e. tx simulation by RPC as we simulated the tx above
-                // This allows Triton RPCs to send the transaction through multiple pathways for the fastest delivery
+
                 skipPreflight: true,
-                // Setting max retries to 0 as we are handling retries manually
-                // Set this manually so that the default is skipped
+
                 maxRetries: 0,
             });
         }
@@ -203,7 +195,9 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
     console.log(
         `[${getCurrentLocalTime()}] https://solscan.io/tx/${txSignature}`
     );
-    let buy_or_sell = inputMint === SOL ? ["BOUGHT", config.amount, outputMint] : ["SOLD", Math.trunc(outputAmount/LAMPORTS_PER_SOL), inputMint];
+    let buy_or_sell = inputMint === SOL ?
+        ["BOUGHT", config.amount, outputMint] :
+        ["SOLD", Math.round((outputAmount/LAMPORTS_PER_SOL) * 100) / 100, inputMint]; // Virker jo ik, det er hans 2 sol
 
 
 

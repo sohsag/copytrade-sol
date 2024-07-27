@@ -1,5 +1,5 @@
 import * as fs from 'fs/promises';
-import {Connection} from "@solana/web3.js";
+import {Connection, Keypair} from "@solana/web3.js";
 import AssetsByOwnerRequest from 'helius-sdk/dist/src/types/das-types'
 import {Helius} from "helius-sdk";
 import {Config} from "./interfaces/Config.ts";
@@ -10,6 +10,7 @@ import {getCurrentLocalTime, delay, SOL} from './utils.ts';
 import axios from "axios";
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
+
 
 
 async function readFile(fileName: string): Promise<Config> {
@@ -51,11 +52,30 @@ function getSwapDetails(swapDetails: any): [number, number, string, string] {
     return [inputAmount, outputAmount, inputMint, outputMint]
 }
 
-function startPing(ws: WebSocket) {
+async function startPing(ws: WebSocket) {
     setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
             ws.ping();
             console.log(`[${getCurrentLocalTime()}] Listening for transactions`);
+            /*
+                Her kan vi tjekke om hvad vi har og opdaterer det fordi hvis vi nu gerne vil lave en tp givet at
+                Hver gang vi laver en handel så kan vi tracke det på en notepad hvor vores entry var henne
+             */
+
+
+        }
+    }, 30000); // Ping every 30 seconds
+}
+
+async function takeProfit(ws: WebSocket, helius: Helius, keypair: Keypair) {
+    setInterval(async () => {
+        if (ws.readyState === WebSocket.OPEN) {
+            let tokenBalance = await helius.rpc.searchAssets({
+                page: 1,
+                ownerAddress: keypair.publicKey.toString(),
+                tokenType: 'fungible'
+            })
+
         }
     }, 30000); // Ping every 30 seconds
 }
@@ -74,7 +94,7 @@ export async function copyTrade(fileName: string) {
         const rpc_connection = `wss://mainnet.helius-rpc.com/?api-key=${settings.helius_api_key}`
         let socket = new WebSocket(rpc_connection)
         // Connection opened
-        socket.on('open', () => {
+        socket.on('open', async () => {
             console.log(`[${getCurrentLocalTime()}] Connected`);
             for (let wallet of settings['wallets_to_track']) {
                 let data = {
@@ -93,7 +113,8 @@ export async function copyTrade(fileName: string) {
                 socket.send(JSON.stringify(data));
             }
 
-            startPing(socket)
+            await startPing(socket)
+            // await takeProfit(socket, helius, keypair)
 
         });
 
@@ -137,7 +158,17 @@ export async function copyTrade(fileName: string) {
                         // We could check what holder holds and sell the same % of ours token in similar way.
                         await jupiterTransact(inputMint, outputMint, item.token_info?.balance as number, outputAmount, settings);
                     }
+                    // Vi kan bare finde prisen af sol og bruge den imod usdc som vi får fra token balances
+                    // på den måde ved vi hvad prisen var da vi købte det
 
+                    // Protection imod at blive fucked af en som sælger køber sælger samme om og om igen for at fucke med copy trader
+                    // hvis man har k'bt og solgt en pair så må man ikke enter samme possition igen. så hvis man har solgt så noteres det på en liste
+                    // og så må man ikke handle med det mere på nær sol self
+
+                    // måske også track record af dem og hvis de har flere end 3 losing trades så bliver de smidt af listen
+                    // eller to, men så er det indenfor et kort interval e.g. 30 min
+
+                    // USDC support?
                 }
 
             }
