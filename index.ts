@@ -5,7 +5,11 @@ import fs from 'node:fs';
 import path from 'path';
 import axios from "axios";
 import {machineId} from 'node-machine-id';
-import {delay} from "./utils.ts";
+import {delay, readFile} from "./utils.ts";
+import {migrationSnipe} from "./migrationSnipe.ts"
+import {keysTypeMap} from "@metaplex-foundation/beet-solana";
+import {Config} from "./interfaces/Config.ts"
+import {MigrationSnipeConfig} from "./interfaces/migrationSnipeConfig.ts";
 
 const mainMenuString  = "" +
     "██╗  ██╗██╗  ██╗ █████╗ ███╗   ██╗\n" +
@@ -131,7 +135,7 @@ async function copyTradeMenu() {
             const webhook = await inputString('Enter discord webhook')
             const fileName = await inputString('Enter a name for this configuration')
             const filePath = path.join(currentDir, "copyTradeSettings", `${fileName}.json`);
-            let config = {
+            let config: Config = {
                 "private_key": private_key,
                 "wallets_to_track": wallets_to_track,
                 "helius_api_key": helius_api_key,
@@ -172,6 +176,77 @@ async function copyTradeMenu() {
     }
 }
 
+async function migrationSnipeMenu() {
+    clear()
+    console.log(migrationSnipeString)
+
+    console.log("1. Snipe")
+    console.log("2. Display current settings")
+    console.log("3. Edit slippage")
+    console.log("4. New settings")
+    console.log("5. Go back to main menu\n")
+    let settings;
+    const filePath = path.join(currentDir, `migrationSnipeSettings.json`);
+    let config: MigrationSnipeConfig;
+    switch (await inputNumber('Select option', 1, 5)) {
+
+        case 1:
+            clear()
+            let output = await inputString("Enter contract address")
+            let amount = await inputNumber('Enter amount in SOL', undefined, undefined, 0.0001)
+            let priorityFee = await inputNumber('Enter priority fee in SOL', undefined, undefined, 0.0001)
+
+            return migrationSnipe(output, amount, priorityFee)
+        case 2:
+            clear()
+            settings = await readFile("migrationSnipeSettings.json") as MigrationSnipeConfig
+            console.log(`private_key: ${settings.private_key}`)
+            console.log(`shyft_api_key: ${settings.shyft_api_key}`)
+            console.log(`quiknode_url: ${settings.quiknode_url}`)
+            console.log(`slippage: ${settings.slippage}`)
+            await inputNumber("1. Go back", 1,1);
+            return await migrationSnipeMenu();
+        case 3:
+            clear()
+            settings = await readFile("migrationSnipeSettings.json") as MigrationSnipeConfig
+            console.log(`current slippage: ${settings.slippage}`)
+            let new_slippage = await inputNumber("Input new slippage", 0, 100, 0.0001)
+            config = {
+                "private_key": settings.private_key,
+                "shyft_api_key": settings.shyft_api_key,
+                "slippage": new_slippage,
+                "quiknode_url": settings.quiknode_url,
+
+            }
+            fs.writeFileSync(filePath, JSON.stringify(config, null, 4))
+            console.log("Settings saved")
+            await delay(2000)
+            await migrationSnipeMenu();
+            break
+        case 4:
+            clear()
+            const private_key = await inputString("Enter api key")
+            const shyft_api_key = await inputString("Enter shyft api key")
+            const slippage = await inputNumber('Enter slippage (0-100)', 0, 100, 0.01)
+            const quiknode_api_key = await inputString("Enter quiknode url");
+            config = {
+                "private_key": private_key,
+                "shyft_api_key": shyft_api_key,
+                "slippage": slippage,
+                "quiknode_url": quiknode_api_key,
+            }
+            fs.writeFileSync(filePath, JSON.stringify(config, null, 4))
+            console.log("Settings saved")
+            await delay(2000)
+            await migrationSnipeMenu();
+            break
+        case 5:
+            await main();
+            break;
+    }
+
+}
+
 async function main() {
     clear()
 
@@ -189,13 +264,8 @@ async function main() {
             await copyTradeMenu();
             break
         case 2:
-            clear()
-            console.log(migrationSnipeString)
-            console.log("Not implemented yet \n")
-            console.log("1. Go back to main menu\n")
-            await inputNumber('Select option', 1, 1)
-            return await main()
-
+            await migrationSnipeMenu();
+            break;
 
         case 3:
             clear()

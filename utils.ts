@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as fs from 'fs/promises';
+import {Config} from "./interfaces/Config.ts";
 
 export const SOL = "So11111111111111111111111111111111111111112";
 
@@ -25,5 +26,15 @@ export async function logToFile(message: string) {
         await fs.appendFile(logFile, logMessage);
     } catch (error) {
 
+    }
+}
+
+export async function readFile<T>(fileName: string): Promise<T> {
+    try {
+        const data = await fs.readFile(`${fileName}`, "utf8");
+        return JSON.parse(data) as T;
+    } catch (err) {
+        console.error('Error reading or parsing file:', err);
+        throw err;
     }
 }

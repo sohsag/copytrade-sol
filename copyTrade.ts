@@ -1,27 +1,16 @@
 import * as fs from 'fs/promises';
 import {Connection, Keypair} from "@solana/web3.js";
-import AssetsByOwnerRequest from 'helius-sdk/dist/src/types/das-types'
 import {Helius} from "helius-sdk";
 import {Config} from "./interfaces/Config.ts";
 import WebSocket from 'ws';
 
 import {jupiterTransact} from './jupiterTransact.ts';
-import {getCurrentLocalTime, delay, SOL} from './utils.ts';
+import {getCurrentLocalTime, delay, SOL, readFile} from './utils.ts';
 import axios from "axios";
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
 
 
-
-async function readFile(fileName: string): Promise<Config> {
-    try {
-        const data = await fs.readFile(`${fileName}`, "utf8");
-        return JSON.parse(data);
-    } catch (err) {
-        console.error('Error reading or parsing file:', err);
-        throw err;
-    }
-}
 
 function decodeBuffer(websocketData: WebSocket.Data) {
     let buffer: string;
@@ -82,7 +71,7 @@ async function takeProfit(ws: WebSocket, helius: Helius, keypair: Keypair) {
 
 export async function copyTrade(fileName: string) {
     try {
-        const settings = await readFile(fileName);
+        const settings = await readFile(fileName) as Config;
         console.log(`[${getCurrentLocalTime()}] Copying the following wallets`)
         for (let wallet of settings.wallets_to_track) {
             console.log(wallet)
@@ -158,7 +147,7 @@ export async function copyTrade(fileName: string) {
                         // We could check what holder holds and sell the same % of ours token in similar way.
                         await jupiterTransact(inputMint, outputMint, item.token_info?.balance as number, outputAmount, settings);
                     }
-                    // Skal være atomic, alsåts når vi sender en transaction så skal den gennemføres før andre på komme. 
+                    // Skal være atomic, alsåts når vi sender en transaction så skal den gennemføres før andre på komme.
 
                     // Vi kan bare finde prisen af sol og bruge den imod usdc som vi får fra token balances
                     // på den måde ved vi hvad prisen var da vi købte det

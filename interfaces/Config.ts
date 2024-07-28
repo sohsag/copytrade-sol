@@ -8,3 +8,4 @@ export interface Config {
     "shyft_api_key": string,
     "webhook": string
 }
+
