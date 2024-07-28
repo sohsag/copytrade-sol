@@ -142,7 +142,7 @@ export async function copyTrade(fileName: string) {
                 let data = response.data[0];
                 if (data.type !== "SWAP") return
                 console.log(`[${getCurrentLocalTime()}] Incoming transaction: https://solscan.io/tx/${signature}`)
-                // check at denne sig også er confirmed og ikke har error
+
                 let checkSignature = await helius.connection.getSignatureStatus(signature)
                 if (checkSignature.value?.err) return;
                 if (!data.events.swap) return
@@ -158,6 +158,8 @@ export async function copyTrade(fileName: string) {
                         // We could check what holder holds and sell the same % of ours token in similar way.
                         await jupiterTransact(inputMint, outputMint, item.token_info?.balance as number, outputAmount, settings);
                     }
+                    // Skal være atomic, alsåts når vi sender en transaction så skal den gennemføres før andre på komme. 
+
                     // Vi kan bare finde prisen af sol og bruge den imod usdc som vi får fra token balances
                     // på den måde ved vi hvad prisen var da vi købte det
 

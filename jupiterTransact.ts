@@ -6,7 +6,7 @@ import axios from "axios";
 import {Config} from "./interfaces/Config.ts";
 import {delay, getCurrentLocalTime, logToFile, SOL} from "./utils.ts"
 
-
+let attemps = 0;
 
 export async function jupiterTransact(inputMint: string, outputMint: string, inputAmount: number, outputAmount: number, config: Config) {
     const RPC_ENDPOINT = `https://rpc.shyft.to?api_key=${config.shyft_api_key}`;
@@ -178,6 +178,11 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
     if (!confirmedTx) {
         console.log(`[${getCurrentLocalTime()}] Transaction failed`);
         await delay(1000)
+        attemps++;
+        if (attemps === 4) {
+            attemps = 0;
+            return;
+        }
         await jupiterTransact(inputMint, outputMint, inputAmount, outputAmount, config)
         return;
     }
