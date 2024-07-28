@@ -179,7 +179,7 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
         console.log(`[${getCurrentLocalTime()}] Transaction failed`);
         await delay(1000)
         attemps++;
-        if (attemps === 4) {
+        if (attemps === 10) {
             attemps = 0;
             return;
         }
