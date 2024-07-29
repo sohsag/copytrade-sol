@@ -9,7 +9,8 @@ import input from "@inquirer/input";
 // Vi vil gerne bare bruge dexes = raydium find uaf hvordan man gør det. vi må kalde 10 gange i sekundet vi gør bare hver 0.15 sekund
 // når den findes så bruger vi bare jupitertransact og kører
 
-
+//https://github.com/chainstacklabs/raydium-sdk-swap-example-typescript
+//https://github.com/raydium-io/raydium-sdk
 
 
 
@@ -26,7 +27,7 @@ export async function migrationSnipe(outputMint: string, inputAmount: number, pr
     const SWAP_AMOUNT = inputAmount * LAMPORTS_PER_SOL
     const COMMITMENT_LEVEL = "confirmed";
     const PRIORITY_FEE_LAMPORTS = Math.trunc(LAMPORTS_PER_SOL * priority_fee);
-    const TX_RETRY_INTERVAL = 120; // TODO: How many times per second can i call?
+    const TX_RETRY_INTERVAL = 40; // TODO: How many times per second can i call?
 
     const connection = new Connection(RPC_ENDPOINT, {
         commitment: COMMITMENT_LEVEL,
@@ -46,11 +47,19 @@ export async function migrationSnipe(outputMint: string, inputAmount: number, pr
 
     try {
         console.log(`[${getCurrentLocalTime()}] Fetching swap quote`);
-
+        let swapApiResult;
         // Get quote for swap
-        swapApiResult = await axios.get(`${config.quiknode_url}quote?inputMint=${SWAP_TOKEN_FROM}&outputMint=${SWAP_TOKEN_TO}&amount=${SWAP_AMOUNT}&slippageBps=${Math.trunc(config.slippage*100)}&dexes=Raydium`);
+        while (typeof swapApiResult === "undefined") {
+            try {
+                console.log(`[${getCurrentLocalTime()}] Waiting for swap quote`)
+                swapApiResult = await axios.get(`https://public.jupiterapi.com/quote?inputMint=${SWAP_TOKEN_FROM}&outputMint=${SWAP_TOKEN_TO}&amount=${SWAP_AMOUNT}&slippageBps=${Math.trunc(config.slippage*100)}&dexes=Raydium`);
 
-        // throw error if response is not ok
+            } catch (e) {
+                console.log(e)
+                await delay(120)
+            }
+        }
+
         if (!(swapApiResult.status >= 200) && swapApiResult.status < 300) {
             throw new Error(
                 `Failed to fetch swap quote: ${swapApiResult.status}`
@@ -66,7 +75,7 @@ export async function migrationSnipe(outputMint: string, inputAmount: number, pr
         );
 
 
-        swapApiResult = await axios.post(`${config.quiknode_url}swap`, {
+        swapApiResult = await axios.post(`https://public.jupiterapi.com/swap`, {
             quoteResponse: quoteResponse,
             userPublicKey: USER_KEYPAIR.publicKey.toBase58(),
             wrapAndUnwrapSol: false,
@@ -157,11 +166,6 @@ export async function migrationSnipe(outputMint: string, inputAmount: number, pr
             if (confirmedTx) {
                 break;
             }
-            if (numberOfRetries === 150) {
-                throw new Error(
-                    "Too many retries. Fetching data again"
-                );
-            }
             numberOfRetries++;
 
 
@@ -177,7 +181,6 @@ export async function migrationSnipe(outputMint: string, inputAmount: number, pr
     } catch (e) {
         console.error(`[${getCurrentLocalTime()}] Error: ${e}`);
         await logToFile(`Error ${e}`)
-        console.log("Trying again")
     }
 
     if (!confirmedTx) {
