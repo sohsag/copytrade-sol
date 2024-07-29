@@ -1,5 +1,5 @@
 // @ts-check
-import eslint from '@eslint/js';
+import eslint from '@eslint/js'
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import nodePlugin from 'eslint-plugin-n';
