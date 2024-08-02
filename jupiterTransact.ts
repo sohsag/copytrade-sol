@@ -200,14 +200,16 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
     console.log(
         `[${getCurrentLocalTime()}] https://solscan.io/tx/${txSignature}`
     );
+
+
     let buy_or_sell = inputMint === SOL ?
         ["BOUGHT", config.amount, outputMint] :
-        ["SOLD", Math.round((outputAmount/LAMPORTS_PER_SOL) * 100) / 100, inputMint]; // Virker jo ik, det er hans 2 sol
+        ["SOLD", await getSell(txSignature as string, config.helius_api_key), inputMint]; // Virker jo ik, det er hans 2 sol
 
 
 
     await axios.post(config.webhook, {
-        "username": "star",
+        "username": "khan",
         "embeds": [
             {
                 "title": `${buy_or_sell[0]} ${buy_or_sell[1]} SOL of ${buy_or_sell[2]}`,
@@ -218,4 +220,11 @@ export async function jupiterTransact(inputMint: string, outputMint: string, inp
 
 
 
+}
+
+async function getSell(signature: string, helius_api_key: string): Promise<number> {
+    let url = `https://api.helius.xyz/v0/transactions/?api-key=${helius_api_key}`
+    let body = JSON.stringify({'transactions': [signature]});
+    let result = await axios.post(url, body);
+    return result.data[0].events.swap.nativeOutput.amount/LAMPORTS_PER_SOL
 }

@@ -1,0 +1,112 @@
+[
+    [
+        "9TxGXQdTehE1y9Gtr4uf6Kd4Bw27zFX7fhNyDr8h8iuB",
+        {
+            "wins": 19,
+            "losses": 16,
+            "pnl": 3834.034806516097,
+            "winrate": 54,
+            "roi": 0.07100134970736408
+        }
+    ],
+    [
+        "8kfdvbYMZJY3vF7yZfomN1dPwkzTJVxSmYgex7hE4Rmh",
+        {
+            "wins": 760,
+            "losses": 240,
+            "pnl": 170136.5810048286,
+            "winrate": 76,
+            "roi": 0.01808467649140781
+        }
+    ],
+    [
+        "EwRQ1MFCEteuNM6FtSWVU6DCiFbm1B7zxYkLYGgqqmwG",
+        {
+            "wins": 4,
+            "losses": 7,
+            "pnl": 43107.159381235004,
+            "winrate": 36,
+            "roi": 0.13142710335036914
+        }
+    ],
+    [
+        "F2cKRqEneTzcDDwnow4zvZAWovUHFFSEJaAD7VpqoVuY",
+        {
+            "wins": 520,
+            "losses": 480,
+            "pnl": 115.95031863638168,
+            "winrate": 52,
+            "roi": 0.22113369524676718
+        }
+    ],
+    [
+        "2Z92bNhhqdS8yRccuu3jR7Xa3mSzGWPbmkddinExWuE6",
+        {
+            "wins": 820,
+            "losses": 180,
+            "pnl": 233913.0655615001,
+            "winrate": 82,
+            "roi": 0.01788255058416226
+        }
+    ],
+    [
+        "CPUvH6fYkpYBK5raccquTMNJAGc6eQ37VVqBgHq3hwjp",
+        {
+            "wins": 780,
+            "losses": 220,
+            "pnl": 899378.1572842114,
+            "winrate": 78,
+            "roi": 0.040423664201920936
+        }
+    ],
+    [
+        "AkxbJQtTyGXoe6DSctNwPNCtf41cBa8mfTZ2kfPCeBs7",
+        {
+            "wins": 5,
+            "losses": 5,
+            "pnl": 43.68871041698687,
+            "winrate": 50,
+            "roi": 0.25141184710979864
+        }
+    ],
+    [
+        "FJ6m3ANh2Yu49vsDhPrXTauhxTAQA2ywkEwbGLXFGn6A",
+        {
+            "wins": 3,
+            "losses": 3,
+            "pnl": 118.03434674085807,
+            "winrate": 50,
+            "roi": 0.03651251338285257
+        }
+    ],
+    [
+        "FR9Y1USSdWKsaSD5TDE7seK3p8ExLds3KFHHieXj7fGU",
+        {
+            "wins": 500,
+            "losses": 500,
+            "pnl": 4996.532786538059,
+            "winrate": 50,
+            "roi": 0.23542877849170943
+        }
+    ],
+    [
+        "HVidMMZVvGmtg587NGCcYYEiU12CPnvEVGqnYCeainH5",
+        {
+            "wins": 3,
+            "losses": 1,
+            "pnl": 100.54679490616067,
+            "winrate": 75,
+            "roi": 0.03993908667868161
+        }
+    ],
+    [
+        "FQWES7yEdHvJRwvntU2gkJd6UuQZyacNvkisfvRPs3dd",
+        {
+            "wins": 17,
+            "losses": 12,
+            "pnl": 8.53629318185805,
+            "winrate": 59,
+            "roi": 0.05151199349485234
+        }
+    ]
+]

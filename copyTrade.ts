@@ -2,13 +2,15 @@ import * as fs from 'fs/promises';
 import {Connection, Keypair} from "@solana/web3.js";
 import {Helius} from "helius-sdk";
 import {Config} from "./interfaces/Config.ts";
+import {Buys} from "./interfaces/Buys.ts"
 import WebSocket from 'ws';
 
 import {jupiterTransact} from './jupiterTransact.ts';
-import {getCurrentLocalTime, delay, SOL, readFile} from './utils.ts';
+import {getCurrentLocalTime, delay, SOL, readFile, CURRENT_DIR} from './utils.ts';
 import axios from "axios";
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
+import path from "path";
 
 
 
@@ -147,6 +149,7 @@ export async function copyTrade(fileName: string) {
                         // We could check what holder holds and sell the same % of ours token in similar way.
                         await jupiterTransact(inputMint, outputMint, item.token_info?.balance as number, outputAmount, settings);
                     }
+
                     // Skal være atomic, alsåts når vi sender en transaction så skal den gennemføres før andre på komme.
 
                     // Vi kan bare finde prisen af sol og bruge den imod usdc som vi får fra token balances
@@ -161,7 +164,23 @@ export async function copyTrade(fileName: string) {
 
                     // USDC support?
                 }
+                /*
+                const filePath = path.join(CURRENT_DIR, `copyTradeBuys.json`);
+                let buy = await readFile<Buys[]>(filePath)
+                let price_in_usdc = await axios.get(
+                    "ttps://public-api.birdeye.so/defi/price?address=So11111111111111111111111111111111111111112",
+                    {headers: {'X-API-KEY': '8c85407ed09d46d9990d86a83db39912'}}
+                );
+                for (let b of buy) {
+                    if (b.contract_address === inputMint) {
+                        // Plus hvad man allerede har købt
+                    }
+                }
+                buy.push({'contract_address': inputMint, 'price_in_usdc': price_in_usdc.data.data.value * inputAmount})
+                fs.writeFile(filePath, JSON.stringify(buy, null, 4));
+                // kan nok godt få en pris fra quote
 
+                 */
             }
 
 

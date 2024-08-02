@@ -5,11 +5,12 @@ import fs from 'node:fs';
 import path from 'path';
 import axios from "axios";
 import {machineId} from 'node-machine-id';
-import {delay, readFile} from "./utils.ts";
+import {delay, readFile, CURRENT_DIR} from "./utils.ts";
 import {migrationSnipe} from "./migrationSnipe.ts"
-import {keysTypeMap} from "@metaplex-foundation/beet-solana";
 import {Config} from "./interfaces/Config.ts"
 import {MigrationSnipeConfig} from "./interfaces/migrationSnipeConfig.ts";
+import {FindWallet} from "./interfaces/FindWallet.ts";
+import {goodWallets, OrderBy} from "./updateWallets.ts";
 
 const mainMenuString  = "" +
     "██╗  ██╗██╗  ██╗ █████╗ ███╗   ██╗\n" +
@@ -38,7 +39,15 @@ const migrationSnipeString = "" +
     "╚═╝     ╚═╝╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝\n" +
     "                                                                      "
 
-const currentDir = process.cwd();
+const findWalletString = "" +
+    "███████╗██╗███╗   ██╗██████╗     ██╗    ██╗ █████╗ ██╗     ██╗     ███████╗████████╗███████╗\n" +
+    "██╔════╝██║████╗  ██║██╔══██╗    ██║    ██║██╔══██╗██║     ██║     ██╔════╝╚══██╔══╝██╔════╝\n" +
+    "█████╗  ██║██╔██╗ ██║██║  ██║    ██║ █╗ ██║███████║██║     ██║     █████╗     ██║   ███████╗\n" +
+    "██╔══╝  ██║██║╚██╗██║██║  ██║    ██║███╗██║██╔══██║██║     ██║     ██╔══╝     ██║   ╚════██║\n" +
+    "██║     ██║██║ ╚████║██████╔╝    ╚███╔███╔╝██║  ██║███████╗███████╗███████╗   ██║   ███████║\n" +
+    "╚═╝     ╚═╝╚═╝  ╚═══╝╚═════╝      ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝   ╚═╝   ╚══════╝\n" +
+    "                                                                                            "
+
 
 async function login() {
     let token = await inputString("Enter license key")
@@ -93,7 +102,7 @@ async function inputString(message: string) {
 
 async function selectFile(directory: string) {
     clear()
-    const files = fs.readdirSync(path.join(currentDir, directory))
+    const files = fs.readdirSync(path.join(CURRENT_DIR, directory))
     console.log("Choose one of the settings below \n")
     for (let i = 0; i < files.length; i++) {
         console.log(`${i+1}. ${files[i]}`);
@@ -102,7 +111,7 @@ async function selectFile(directory: string) {
 
     let num = await inputNumber('Select setting', 1, files.length);
     clear()
-    return path.join(currentDir, directory, files[num-1])
+    return path.join(CURRENT_DIR, directory, files[num-1])
 
 }
 
@@ -134,7 +143,7 @@ async function copyTradeMenu() {
             const amount = await inputNumber('Enter amount per buy in SOL', undefined, undefined, 0.0001)
             const webhook = await inputString('Enter discord webhook')
             const fileName = await inputString('Enter a name for this configuration')
-            const filePath = path.join(currentDir, "copyTradeSettings", `${fileName}.json`);
+            const filePath = path.join(CURRENT_DIR, "copyTradeSettings", `${fileName}.json`);
             let config: Config = {
                 "private_key": private_key,
                 "wallets_to_track": wallets_to_track,
@@ -180,16 +189,23 @@ async function migrationSnipeMenu() {
     clear()
     console.log(migrationSnipeString)
 
+    console.log("Not ready yet \n");
+    /*
     console.log("1. Snipe")
     console.log("2. Display current settings")
     console.log("3. Edit slippage")
     console.log("4. New settings")
-    console.log("5. Go back to main menu\n")
-    let settings;
-    const filePath = path.join(currentDir, `migrationSnipeSettings.json`);
-    let config: MigrationSnipeConfig;
-    switch (await inputNumber('Select option', 1, 5)) {
 
+     */
+    console.log("5. Go back to main menu\n")
+    /*
+    let settings;
+    const filePath = path.join(CURRENT_DIR, `migrationSnipeSettings.json`);
+    let config: MigrationSnipeConfig;
+
+     */
+    switch (await inputNumber('Select option', 5, 5)) {
+    /*
         case 1:
             clear()
             let output = await inputString("Enter contract address")
@@ -240,6 +256,8 @@ async function migrationSnipeMenu() {
             await delay(2000)
             await migrationSnipeMenu();
             break
+
+     */
         case 5:
             await main();
             break;
@@ -259,7 +277,7 @@ async function main() {
     console.log(opt2)
     console.log(opt3 + "\n")
 
-    switch (await inputNumber('Select option ', 1,3)) {
+    switch (await inputNumber('Select option ', 1,4)) {
         case 1:
             await copyTradeMenu();
             break
@@ -269,27 +287,51 @@ async function main() {
 
         case 3:
             clear()
-            console.log("Find wallets\n")
-            console.log("Not implemented yet \n")
-            console.log("1. Go back to main menu\n")
-            await inputNumber('Select option', 1, 1)
-            return await main()
+            console.log(findWalletString)
+            console.log("1. Start")
+            console.log("2. Go back to main menu\n")
 
-            /*
-            const helius_api_key = await input({ message: 'Enter helius api key' });
-            process.stdout.write("")
-            const timeframe = await number({ message: 'Enter time frame in days', min: 1, max: 30 });
-            process.stdout.write("")
-            const winrate = await number({ message: 'Enter minimum winrate in %', min: 1, max: 100 });
-            process.stdout.write("")
-            const minimumAmountOfTrades = await number({ message: 'Enter minimum amount of trades', min: 1 });
-            process.stdout.write("")
-            const maximumAmountOfTrades = await number({ message: 'Enter maximum amount of trades', min: 1 });
-            process.stdout.write("")
-            const minimumPnl = await number({ message: 'Enter minimum Pnl in $', min: 1 });
-            process.stdout.write("")
-            */
 
+            switch (await inputNumber('Select option', 1, 2)) {
+                case 1:
+                    let contractAddresses = [];
+                    let contractAddress;
+                    do {
+                        contractAddress = await inputString("Enter contract addresses. When finished type 0")
+                        if (contractAddress !== '0') contractAddresses.push(contractAddress);
+                    } while (contractAddress !== '0');
+                    const helius_api_key = await inputString('Enter helius api key')
+                    const timeframe = await inputNumber('Enter time frame in days', 1, 30)
+                    const winrate = await inputNumber('Enter minimum winrate in %', 0, 100)
+                    const minimumAmountOfTrades = await inputNumber('Enter minimum amount of trades', 1)
+                    const maximumAmountOfTrades =  await inputNumber('Enter maximum amount of trades', 1)
+                    const minimumPnl = await inputNumber('Enter minimum Pnl in $')
+                    const minimumROI = await inputNumber('Enter minimum ROI in %')
+                    let listOfOrderBy: OrderBy[] = ['pnl', 'winrate', 'roi']
+                    console.log("1. PNL")
+                    console.log("2. winrate")
+                    console.log("3. ROI")
+                    let orderBy: OrderBy = listOfOrderBy[await inputNumber('What should the output be ordered by', 1, 3)]
+                    let findWalletSettings: FindWallet = {
+                        helius_api_key: helius_api_key,
+                        timeframe: timeframe,
+                        minimumWinrate: winrate,
+                        minimumAmountOfTrades: minimumAmountOfTrades,
+                        minimumPnl: minimumPnl,
+                        minimumROI: minimumROI,
+                        maximumAmountOfTrades: maximumAmountOfTrades,
+                        orderBy: orderBy
+                    }
+                    for (const ca of contractAddresses) {
+                        await goodWallets(findWalletSettings, ca)
+                    }
+
+                    break
+
+                case 2:
+                    await main()
+            }
+            break
         default:
             console.log("Not valid option")
             break
