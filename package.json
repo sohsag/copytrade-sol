@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@jup-ag/api": "^6.0.24",
+    "@raydium-io/raydium-sdk-v2": "^0.1.55-alpha",
     "@solana/web3.js": "^1.95.1",
     "@tecfu/is-multiple-of": "^1.0.2",
     "@types/ws": "^8.5.11",

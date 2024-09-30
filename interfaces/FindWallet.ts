@@ -1,4 +1,4 @@
-import {OrderBy} from "../updateWallets.ts";
+import {OrderBy} from "../updateWallets";
 
 export interface FindWallet {
     'helius_api_key': string,

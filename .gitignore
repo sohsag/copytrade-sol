@@ -1,5 +1,7 @@
 /node_modules
 /copyTradeSettings
+/findWalletResults
 migrationSnipeSettings.json
 copyTradeBuys.json
 *.txt
+/dist

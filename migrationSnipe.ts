@@ -2,8 +2,8 @@ import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from "@solana/web3
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
 import axios from "axios";
-import {MigrationSnipeConfig} from "./interfaces/migrationSnipeConfig.ts";
-import {delay, getCurrentLocalTime, logToFile, SOL, readFile} from "./utils.ts"
+import {MigrationSnipeConfig} from "./interfaces/migrationSnipeConfig";
+import {delay, getCurrentLocalTime, logToFile, SOL, readFile} from "./utils"
 import input from "@inquirer/input";
 // https://www.quicknode.com/docs/solana/quote
 // Vi vil gerne bare bruge dexes = raydium find uaf hvordan man gør det. vi må kalde 10 gange i sekundet vi gør bare hver 0.15 sekund
@@ -17,11 +17,11 @@ import input from "@inquirer/input";
 
 export async function migrationSnipe(outputMint: string, inputAmount: number, priority_fee: number) {
     const config = await readFile("migrationSnipeSettings.json") as MigrationSnipeConfig;
-    const RPC_ENDPOINT = `https://rpc.shyft.to?api_key=${config.shyft_api_key}`;
+    const RPC_ENDPOINT = `https://rpc.shyft.to?api_key=${config.RPC}`;
     const USER_KEYPAIR = web3.Keypair.fromSecretKey(
         bs58.decode(config.private_key),
     );
-
+    // https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&slippageBps=50&txVersion=V0
     const SWAP_TOKEN_FROM = SOL;
     const SWAP_TOKEN_TO = outputMint;
     const SWAP_AMOUNT = inputAmount * LAMPORTS_PER_SOL

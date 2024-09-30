@@ -3,8 +3,8 @@ import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from "@solana/web3
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
 import axios from "axios";
-import {Config} from "./interfaces/Config.ts";
-import {delay, getCurrentLocalTime, logToFile, SOL} from "./utils.ts"
+import {Config} from "./interfaces/Config";
+import {delay, getCurrentLocalTime, logToFile, SOL} from "./utils"
 
 let attemps = 0;
 

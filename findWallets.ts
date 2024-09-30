@@ -1,7 +1,7 @@
 // find_wallets.ts
 
 import axios from 'axios';
-import {getCurrentLocalTime} from "./utils.ts";
+import {getCurrentLocalTime} from "./utils";
 
 
 
@@ -72,7 +72,6 @@ export async function fetchWallets(coin: string, helius_api_key: string): Promis
             }
             await new Promise(resolve => setTimeout(resolve, 600));
             console.log(`[${getCurrentLocalTime()}] Searching for wallets, currently ${Object.keys(wallets).length} wallets found`);
-            break;
         } catch (error) {
             console.error(error instanceof Error ? error.message : String(error));
             return wallets;

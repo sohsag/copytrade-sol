@@ -1,12 +1,12 @@
 import * as fs from 'fs/promises';
 import {Connection, Keypair} from "@solana/web3.js";
 import {Helius} from "helius-sdk";
-import {Config} from "./interfaces/Config.ts";
-import {Buys} from "./interfaces/Buys.ts"
+import {Config} from "./interfaces/Config";
+import {Buys} from "./interfaces/Buys"
 import WebSocket from 'ws';
 
-import {jupiterTransact} from './jupiterTransact.ts';
-import {getCurrentLocalTime, delay, SOL, readFile, CURRENT_DIR} from './utils.ts';
+import {jupiterTransact} from './jupiterTransact';
+import {getCurrentLocalTime, delay, SOL, readFile, CURRENT_DIR} from './utils';
 import axios from "axios";
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";

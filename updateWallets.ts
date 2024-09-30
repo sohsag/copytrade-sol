@@ -2,8 +2,8 @@
 
 import axios from 'axios';
 import { fetchWallets } from './findWallets';
-import {CURRENT_DIR, getCurrentLocalTime} from "./utils.ts";
-import {FindWallet} from "./interfaces/FindWallet.ts";
+import {CURRENT_DIR, getCurrentLocalTime} from "./utils";
+import {FindWallet} from "./interfaces/FindWallet";
 import fs from "node:fs";
 import path from "path";
 

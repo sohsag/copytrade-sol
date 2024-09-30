@@ -1,16 +1,17 @@
 import input from '@inquirer/input';
 import number from '@inquirer/number';
-import {copyTrade} from "./copyTrade.ts"
+import {copyTrade} from "./copyTrade"
 import fs from 'node:fs';
 import path from 'path';
 import axios from "axios";
 import {machineId} from 'node-machine-id';
-import {delay, readFile, CURRENT_DIR} from "./utils.ts";
-import {migrationSnipe} from "./migrationSnipe.ts"
-import {Config} from "./interfaces/Config.ts"
-import {MigrationSnipeConfig} from "./interfaces/migrationSnipeConfig.ts";
-import {FindWallet} from "./interfaces/FindWallet.ts";
-import {goodWallets, OrderBy} from "./updateWallets.ts";
+import {delay, readFile, CURRENT_DIR, wrapSol} from "./utils";
+import {migrationSnipe} from "./migrationSnipe"
+import {Config} from "./interfaces/Config"
+import {MigrationSnipeConfig} from "./interfaces/migrationSnipeConfig";
+import {FindWallet} from "./interfaces/FindWallet";
+import {goodWallets, OrderBy} from "./updateWallets";
+import {migrationRaydiumSnipe} from "./raydiumMigrationSnipe";
 
 const mainMenuString  = "" +
     "██╗  ██╗██╗  ██╗ █████╗ ███╗   ██╗\n" +
@@ -189,36 +190,32 @@ async function migrationSnipeMenu() {
     clear()
     console.log(migrationSnipeString)
 
-    console.log("Not ready yet \n");
-    /*
     console.log("1. Snipe")
     console.log("2. Display current settings")
     console.log("3. Edit slippage")
     console.log("4. New settings")
+    console.log("5. Wrap sol")
 
-     */
-    console.log("5. Go back to main menu\n")
-    /*
+    console.log("6. Go back to main menu\n")
+
     let settings;
     const filePath = path.join(CURRENT_DIR, `migrationSnipeSettings.json`);
     let config: MigrationSnipeConfig;
 
-     */
-    switch (await inputNumber('Select option', 5, 5)) {
-    /*
+
+    switch (await inputNumber('Select option', 1, 6)) {
         case 1:
             clear()
             let output = await inputString("Enter contract address")
-            let amount = await inputNumber('Enter amount in SOL', undefined, undefined, 0.0001)
-            let priorityFee = await inputNumber('Enter priority fee in SOL', undefined, undefined, 0.0001)
+            let amount = await inputNumber('Enter amount in SOL', 0, undefined, 0.0001)
+            let priorityFee = await inputNumber('Enter priority fee in SOL', 0, undefined, 0.0001)
 
-            return migrationSnipe(output, amount, priorityFee)
+            await migrationRaydiumSnipe(output, amount, priorityFee)
         case 2:
             clear()
             settings = await readFile("migrationSnipeSettings.json") as MigrationSnipeConfig
             console.log(`private_key: ${settings.private_key}`)
-            console.log(`shyft_api_key: ${settings.shyft_api_key}`)
-            console.log(`quiknode_url: ${settings.quiknode_url}`)
+            console.log(`RPC (node): ${settings.RPC}`)
             console.log(`slippage: ${settings.slippage}`)
             await inputNumber("1. Go back", 1,1);
             return await migrationSnipeMenu();
@@ -229,10 +226,9 @@ async function migrationSnipeMenu() {
             let new_slippage = await inputNumber("Input new slippage", 0, 100, 0.0001)
             config = {
                 "private_key": settings.private_key,
-                "shyft_api_key": settings.shyft_api_key,
+                "RPC": settings.RPC,
                 "slippage": new_slippage,
-                "quiknode_url": settings.quiknode_url,
-
+                "txn_per_sec": settings.txn_per_sec,
             }
             fs.writeFileSync(filePath, JSON.stringify(config, null, 4))
             console.log("Settings saved")
@@ -241,31 +237,40 @@ async function migrationSnipeMenu() {
             break
         case 4:
             clear()
-            const private_key = await inputString("Enter api key")
-            const shyft_api_key = await inputString("Enter shyft api key")
+            const private_key = await inputString("Enter private key")
+            const RPC_URL = await inputString("RPC url")
             const slippage = await inputNumber('Enter slippage (0-100)', 0, 100, 0.01)
-            const quiknode_api_key = await inputString("Enter quiknode url");
+            const txn_per_second = await inputNumber('Transaction per second (View this from ur RPC)', 0, 1000, 1)
             config = {
                 "private_key": private_key,
-                "shyft_api_key": shyft_api_key,
+                "RPC": RPC_URL,
                 "slippage": slippage,
-                "quiknode_url": quiknode_api_key,
+                "txn_per_sec": txn_per_second
             }
             fs.writeFileSync(filePath, JSON.stringify(config, null, 4))
             console.log("Settings saved")
             await delay(2000)
             await migrationSnipeMenu();
             break
-
-     */
         case 5:
+            clear()
+            settings = await readFile("migrationSnipeSettings.json") as MigrationSnipeConfig
+            let amount2 = await inputNumber('Enter amount in SOL', 0, undefined, 0.0001)
+            await wrapSol(settings.RPC, settings.private_key, amount2)
+            await delay(2000);
+            await migrationSnipeMenu();
+            break
+        case 6:
             await main();
             break;
+        default:
+            break
+
     }
 
 }
 
-async function main() {
+export async function main() {
     clear()
 
     const opt1 = "1. Copy trade"
@@ -275,7 +280,7 @@ async function main() {
     console.log(mainMenuString);
     console.log(opt1)
     console.log(opt2)
-    console.log(opt3 + "\n")
+    console.log(opt3+ "\n")
 
     switch (await inputNumber('Select option ', 1,4)) {
         case 1:
