@@ -293,12 +293,17 @@ export async function main() {
         case 3:
             clear()
             console.log(findWalletString)
+
+            console.log("Patched for now")
+
             console.log("1. Start")
+
             console.log("2. Go back to main menu\n")
 
 
             switch (await inputNumber('Select option', 1, 2)) {
                 case 1:
+                    /*
                     let contractAddresses = [];
                     let contractAddress;
                     do {
@@ -331,6 +336,8 @@ export async function main() {
                         await goodWallets(findWalletSettings, ca)
                     }
 
+                     */
+                    await main();
                     break
 
                 case 2:

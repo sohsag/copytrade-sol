@@ -20,6 +20,7 @@ import {
 } from '@solana/spl-token';
 import * as web3 from "@solana/web3.js";
 import bs58 from "bs58";
+import WebSocket from "ws";
 
 export const SOL = "So11111111111111111111111111111111111111112";
 
@@ -33,7 +34,8 @@ export function getCurrentLocalTime(): string {
     return now.getDate() + '-' +
         String(now.getHours()).padStart(2, '0') + ':' +
         String(now.getMinutes()).padStart(2, '0') + ':' +
-        String(now.getSeconds()).padStart(2, '0');
+        String(now.getSeconds()).padStart(2, '0') + ':' +
+        String(now.getMilliseconds()).padStart(3, '0');
 }
 
 export async function logToFile(message: string) {
@@ -96,114 +98,41 @@ export async function createTokenAccountAdvanced(
     connection: Connection,
     payerAndOwner: Keypair,
     mintAddress: string
-): Promise<string> {
+): Promise<PublicKey> {
+
+    // Convert mint address string to PublicKey
     const mintPublicKey = new PublicKey(mintAddress);
-    const [associatedTokenAddress] = PublicKey.findProgramAddressSync(
+
+    // Derive the associated token account address
+    const associatedTokenAddress = PublicKey.findProgramAddressSync(
         [
             payerAndOwner.publicKey.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
             mintPublicKey.toBuffer(),
         ],
         ASSOCIATED_TOKEN_PROGRAM_ID
-    );
+    )[0];
 
+    // Create the instruction to create the associated token account
     const createAccountInstruction = createAssociatedTokenAccountInstruction(
-        payerAndOwner.publicKey, // payer
+        payerAndOwner.publicKey,
         associatedTokenAddress,
-        payerAndOwner.publicKey, // owner
+        payerAndOwner.publicKey,
         mintPublicKey
     );
 
+    // Create and send the transaction
     const transaction = new Transaction().add(createAccountInstruction);
-
-    // Get a recent blockhash
-    const blockhash = await connection.getLatestBlockhash('confirmed');
-    transaction.recentBlockhash = blockhash.blockhash;
-    transaction.feePayer = payerAndOwner.publicKey;
-
-    // Sign the transaction
-    const signedTx = transaction.sign(payerAndOwner);
-    const serializedTx = signedTx.serialize();
-
-    // Create a VersionedTransaction
-    const versionedTx = VersionedTransaction.deserialize(serializedTx);
-
-    // Simulate the transaction
-    const simulationResult = await connection.simulateTransaction(versionedTx, {
-        commitment: 'confirmed',
-    });
-
-    if (simulationResult.value.err) {
-        throw new Error(
-            `Transaction simulation failed with error ${JSON.stringify(
-                simulationResult.value.err
-            )}`
-        );
-    }
-
-    console.log(
-        `[${getCurrentLocalTime()}] Transaction simulation successful`
+    const signature = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        [payerAndOwner]
     );
 
-    const txSignature = bs58.encode(versionedTx.signatures[0]);
 
-    console.log(
-        `[${getCurrentLocalTime()}] Subscribing to transaction confirmation`
-    );
 
-    const confirmTransactionPromise = connection.confirmTransaction(
-        {
-            signature: txSignature,
-            blockhash: blockhash.blockhash,
-            lastValidBlockHeight: blockhash.lastValidBlockHeight,
-        },
-        'confirmed'
-    );
+    return associatedTokenAddress;
 
-    console.log(
-        `[${getCurrentLocalTime()}] Sending Transaction ${txSignature}`
-    );
-
-    await connection.sendRawTransaction(serializedTx, {
-        skipPreflight: true,
-        maxRetries: 0,
-    });
-
-    let numberOfRetries = 0;
-    let confirmedTx = null;
-
-    while (!confirmedTx) {
-        confirmedTx = await Promise.race([
-            confirmTransactionPromise,
-            new Promise((resolve) =>
-                setTimeout(() => {
-                    resolve(null);
-                }, TX_RETRY_INTERVAL)
-            ),
-        ]);
-
-        if (confirmedTx) {
-            break;
-        }
-
-        if (numberOfRetries === MAX_RETRIES) {
-            throw new Error('Too many retries. Fetching data again');
-        }
-
-        numberOfRetries++;
-
-        await connection.sendRawTransaction(serializedTx, {
-            skipPreflight: true,
-            maxRetries: 0,
-        });
-    }
-
-    console.log(`[${getCurrentLocalTime()}] Transaction confirmed`);
-    console.log('Token account created successfully!');
-    console.log('Transaction signature:', txSignature);
-    console.log('Token account address:', associatedTokenAddress.toString());
-
-    return txSignature;
 }
 
 
@@ -301,4 +230,32 @@ export async function checkWSOLAssociatedAccount(
         console.error('Error checking wSOL associated account:', error);
         return { exists: false, address: null, balance: null };
     }
+}
+
+export async function startPing(ws: WebSocket) {
+    setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.ping();
+            /*
+                Her kan vi tjekke om hvad vi har og opdaterer det fordi hvis vi nu gerne vil lave en tp givet at
+                Hver gang vi laver en handel så kan vi tracke det på en notepad hvor vores entry var henne
+             */
+
+
+        }
+    }, 30000); // Ping every 30 seconds
+}
+
+export async function decodeBuffer(websocketData: WebSocket.Data) {
+    let buffer: string;
+    if (typeof websocketData === 'string') {
+        buffer = websocketData;
+    } else if (websocketData instanceof Buffer) {
+        buffer = websocketData.toString('utf-8');
+    } else if (websocketData instanceof ArrayBuffer) {
+        buffer = Buffer.from(websocketData).toString('utf-8');
+    } else {
+        buffer = Buffer.concat(websocketData).toString('utf-8');
+    }
+    return JSON.parse(buffer)
 }
