@@ -227,6 +227,7 @@ async function migrationSnipeMenu() {
             config = {
                 "private_key": settings.private_key,
                 "RPC": settings.RPC,
+                "RPC_WSS": settings.RPC_WSS,
                 "slippage": new_slippage,
                 "txn_per_sec": settings.txn_per_sec,
             }
@@ -239,11 +240,13 @@ async function migrationSnipeMenu() {
             clear()
             const private_key = await inputString("Enter private key")
             const RPC_URL = await inputString("RPC url")
+            const WSS_RPC_URL = await inputString("WSS RPC url")
             const slippage = await inputNumber('Enter slippage (0-100)', 0, 100, 0.01)
             const txn_per_second = await inputNumber('Transaction per second (View this from ur RPC)', 0, 1000, 1)
             config = {
                 "private_key": private_key,
                 "RPC": RPC_URL,
+                "RPC_WSS": WSS_RPC_URL,
                 "slippage": slippage,
                 "txn_per_sec": txn_per_second
             }

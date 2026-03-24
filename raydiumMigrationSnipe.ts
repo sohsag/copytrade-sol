@@ -38,9 +38,9 @@ export async function migrationRaydiumSnipe(outputMint: string, inputAmount: num
     });
 
 
-    let blockhash = await connection.getLatestBlockhash();
 
-    let swapApiResult;
+
+
 
     let quoteResponse;
     let raydiumTransaction;
@@ -54,14 +54,9 @@ export async function migrationRaydiumSnipe(outputMint: string, inputAmount: num
         outputAccount = accountAvailable.address;
         console.log(`[${getCurrentLocalTime()}] Already set up`);
     } else {
-        while (true) {
-            console.log(`[${getCurrentLocalTime()}] Setting up to buy`);
-            outputAccount = await createTokenAccountAdvanced(connection, USER_KEYPAIR, outputMint)
-            let accountAvailable = await checkAssociatedTokenAccount(connection, USER_KEYPAIR.publicKey.toBase58(), outputMint)
-            if (accountAvailable.exists && accountAvailable.address !== null) {
-                break
-            }
-            await delay(1000)
+
+        console.log(`[${getCurrentLocalTime()}] Setting up to buy`);
+        outputAccount = await createTokenAccountAdvanced(connection, USER_KEYPAIR, outputMint)
         }
         console.log(`[${getCurrentLocalTime()}] Set up to buy`);
 
@@ -112,7 +107,9 @@ export async function migrationRaydiumSnipe(outputMint: string, inputAmount: num
 
             const signature = message.params.result.value.signature
 
-            let parsedTxn = await connection.getParsedTransaction(signature)
+            let parsedTxn = await connection.getParsedTransaction(signature, {
+                maxSupportedTransactionVersion: 0
+            })
 
             if (parsedTxn?.transaction.message.accountKeys.length === 23) {
                 if (parsedTxn?.transaction.message.accountKeys[19].pubkey.toBase58() === outputMint) {
@@ -132,140 +129,147 @@ export async function migrationRaydiumSnipe(outputMint: string, inputAmount: num
 
         });
 
-        socket.on('close', () => {
+
+        socket.on('close', async () => {
+            let swapApiResult;
             console.log(`[${getCurrentLocalTime()}] Migrated!`)
-        });
+            while (!successfulRequest) {
+                try {
+                    console.log(`[${getCurrentLocalTime()}] Waiting for swap quote`);
+                    swapApiResult = await axios.get(`https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=So11111111111111111111111111111111111111112&outputMint=${SWAP_TOKEN_TO}&amount=${SWAP_AMOUNT}&slippageBps=${100 * config.slippage}&txVersion=V0`);
+                    successfulRequest = swapApiResult.data.success
+                    // https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&slippageBps=50&txVersion=V0
 
-            // Get quote for swap
-        while (!successfulRequest) {
-            try {
-                console.log(`[${getCurrentLocalTime()}] Waiting for swap quote`);
-                swapApiResult = await axios.get(`https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=So11111111111111111111111111111111111111112&outputMint=${SWAP_TOKEN_TO}&amount=${SWAP_AMOUNT}&slippageBps=${100*config.slippage}&txVersion=V0`);
-                successfulRequest = swapApiResult.data.success
-                // https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&slippageBps=50&txVersion=V0
-
-            } catch (e) {
-                console.log(e)
-                await delay(100)
+                } catch (e) {
+                    console.log(e)
+                    await delay(100)
+                }
             }
-        }
 
-        // @ts-ignore
-        quoteResponse = swapApiResult.data;
-
-
-        console.log(`[${getCurrentLocalTime()}] Fetched swap quote`);
-
-        console.log(
-            `[${getCurrentLocalTime()}] Fetching swap transaction`
-        );
+            // @ts-ignore
+            quoteResponse = swapApiResult.data;
 
 
-        swapApiResult = await axios.post(`https://transaction-v1.raydium.io/transaction/swap-base-in`, {
-            computeUnitPriceMicroLamports: `${PRIORITY_FEE_LAMPORTS}`,
-            inputAccount: wrappedSolAccount.toBase58(),
-            outputAccount: outputAccount.toBase58(),
-            swapResponse: quoteResponse,
-            txVersion : "V0",
-            unwrapSol: false,
-            wallet: USER_KEYPAIR.publicKey.toBase58(),
-            wrapSol: false
-        });
+            console.log(`[${getCurrentLocalTime()}] Fetched swap quote`);
 
-        // throw error if response is not ok
-        if (!(swapApiResult.status >= 200) && swapApiResult.status < 300) {
-            throw new Error(
-                `Failed to fetch swap transaction: ${swapApiResult.status}`
+            console.log(
+                `[${getCurrentLocalTime()}] Fetching swap transaction`
             );
-        }
-
-        raydiumTransaction = swapApiResult.data.data[0].transaction;
-
-        console.log(`[${getCurrentLocalTime()}] Fetched swap transaction`);
-
-        const swapTransactionBuf = Buffer.from(
-            raydiumTransaction,
-            "base64"
-        );
-
-        const tx = VersionedTransaction.deserialize(swapTransactionBuf);
-        tx.message.recentBlockhash = blockhash.blockhash;
-
-        // Sign the transaction
-        tx.sign([USER_KEYPAIR]);
-
-        // Simulating the transaction
-        const simulationResult = await connection.simulateTransaction(tx, {
-            commitment: "confirmed",
-        });
-
-        if (simulationResult.value.err) {
-            throw new Error(
-                `Transaction simulation failed with error ${JSON.stringify(
-                    simulationResult.value.err
-                )}`
-            );
-        }
-
-        console.log(
-            `[${getCurrentLocalTime()}] Transaction simulation successful result:`
-        );
-
-        const signatureRaw = tx.signatures[0];
-        txSignature = bs58.encode(signatureRaw);
-
-        console.log(
-            `[${getCurrentLocalTime()}] Subscribing to transaction confirmation`
-        );
 
 
-        confirmTransactionPromise = connection.confirmTransaction(
-            {
-                signature: txSignature,
-                blockhash: blockhash.blockhash,
-                lastValidBlockHeight: blockhash.lastValidBlockHeight,
-            },
-            "confirmed"
-        );
+            swapApiResult = await axios.post(`https://transaction-v1.raydium.io/transaction/swap-base-in`, {
+                computeUnitPriceMicroLamports: `${PRIORITY_FEE_LAMPORTS}`,
+                inputAccount: wrappedSolAccount.toBase58(),
+                outputAccount: outputAccount.toBase58(),
+                swapResponse: quoteResponse,
+                txVersion: "V0",
+                unwrapSol: false,
+                wallet: USER_KEYPAIR.publicKey.toBase58(),
+                wrapSol: false
+            });
 
-        console.log(
-            `[${getCurrentLocalTime()}] Sending Transaction ${txSignature}`
-        );
-        await connection.sendRawTransaction(tx.serialize(), {
-
-            skipPreflight: true,
-
-            maxRetries: 0,
-        });
-
-        let numberOfRetries = 0;
-        confirmedTx = null;
-        while (!confirmedTx) {
-            confirmedTx = await Promise.race([
-                confirmTransactionPromise,
-                new Promise((resolve) =>
-                    setTimeout(() => {
-                        resolve(null);
-                    }, TX_RETRY_INTERVAL)
-                ),
-            ]);
-            if (confirmedTx) {
-                break;
-            }
-            numberOfRetries++;
-
-            if (numberOfRetries === 150) {
+            // throw error if response is not ok
+            if (!(swapApiResult.status >= 200) && swapApiResult.status < 300) {
                 throw new Error(
-                    "Too many retries."
+                    `Failed to fetch swap transaction: ${swapApiResult.status}`
                 );
             }
 
+            raydiumTransaction = swapApiResult.data.data[0].transaction;
 
+            console.log(`[${getCurrentLocalTime()}] Fetched swap transaction`);
+
+            const swapTransactionBuf = Buffer.from(
+                raydiumTransaction,
+                "base64"
+            );
+            let blockhash = await connection.getLatestBlockhash();
+            const tx = VersionedTransaction.deserialize(swapTransactionBuf);
+            tx.message.recentBlockhash = blockhash.blockhash;
+
+            // Sign the transaction
+            tx.sign([USER_KEYPAIR]);
+
+            // Simulating the transaction
+            /*const simulationResult = await connection.simulateTransaction(tx, {
+                commitment: "confirmed",
+            });
+
+            if (simulationResult.value.err) {
+                throw new Error(
+                    `Transaction simulation failed with error ${JSON.stringify(
+                        simulationResult.value.err
+                    )}`
+                );
+            }*/
+
+            console.log(
+                `[${getCurrentLocalTime()}] Transaction simulation successful result:`
+            );
+
+            const signatureRaw = tx.signatures[0];
+            txSignature = bs58.encode(signatureRaw);
+
+            console.log(
+                `[${getCurrentLocalTime()}] Subscribing to transaction confirmation`
+            );
+
+
+            confirmTransactionPromise = connection.confirmTransaction(
+                {
+                    signature: txSignature,
+                    blockhash: blockhash.blockhash,
+                    lastValidBlockHeight: blockhash.lastValidBlockHeight,
+                },
+                "confirmed"
+            );
+
+            console.log(
+                `[${getCurrentLocalTime()}] Sending Transaction ${txSignature}`
+            );
             await connection.sendRawTransaction(tx.serialize(), {
+
                 skipPreflight: true,
+
                 maxRetries: 0,
             });
-        }
+
+            let numberOfRetries = 0;
+            confirmedTx = null;
+            let status = await connection.getSignatureStatus(txSignature as string);
+            // @ts-ignore
+            while ((status.value?.confirmationStatus !== "confirmed")  || (status.value?.confirmationStatus !== "finalized")) {
+                confirmedTx = await Promise.race([
+                    confirmTransactionPromise,
+                    new Promise((resolve) =>
+                        setTimeout(() => {
+                            resolve(null);
+                        }, TX_RETRY_INTERVAL)
+                    ),
+                ]);
+                if (confirmedTx) {
+                    break;
+                }
+                numberOfRetries++;
+
+                if (numberOfRetries === 150) {
+                    throw new Error(
+                        "Too many retries."
+                    );
+                }
+
+
+                await connection.sendRawTransaction(tx.serialize(), {
+                    skipPreflight: true,
+                    maxRetries: 0,
+                });
+                status = await connection.getSignatureStatus(txSignature as string);
+
+            }
+        });
+
+            // Get quote for swap
+
     } catch (e) {
         console.error(`[${getCurrentLocalTime()}] Error: ${e}`);
         await logToFile(`Error ${e}`)
@@ -273,13 +277,6 @@ export async function migrationRaydiumSnipe(outputMint: string, inputAmount: num
 
     if (!confirmedTx) {
         console.log(`[${getCurrentLocalTime()}] Transaction failed`);
-        await delay(1000)
-        return await main()
-    }
-
-    let status = await connection.getSignatureStatus(txSignature as string);
-    if (status.value?.err) {
-        console.log("Slippage was exceeded")
         await delay(1000)
         return await main()
     }

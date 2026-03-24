@@ -104,14 +104,14 @@ export async function createTokenAccountAdvanced(
     const mintPublicKey = new PublicKey(mintAddress);
 
     // Derive the associated token account address
-    const associatedTokenAddress = PublicKey.findProgramAddressSync(
+    const [associatedTokenAddress] = PublicKey.findProgramAddressSync(
         [
             payerAndOwner.publicKey.toBuffer(),
             TOKEN_PROGRAM_ID.toBuffer(),
             mintPublicKey.toBuffer(),
         ],
         ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+    );
 
     // Create the instruction to create the associated token account
     const createAccountInstruction = createAssociatedTokenAccountInstruction(
@@ -123,17 +123,72 @@ export async function createTokenAccountAdvanced(
 
     // Create and send the transaction
     const transaction = new Transaction().add(createAccountInstruction);
-    const signature = await sendAndConfirmTransaction(
-        connection,
-        transaction,
-        [payerAndOwner]
-    );
 
+    // Fetch the latest blockhash
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
+    // Set recent blockhash and fee payer
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = payerAndOwner.publicKey;
 
+    // Sign the transaction
+    transaction.sign(payerAndOwner);
+
+    // Serialize the transaction for sending
+    let serializedTx = transaction.serialize();
+    let signature = await connection.sendRawTransaction(serializedTx, {
+        skipPreflight: true, // Optional
+    });
+
+    console.log(`[${getCurrentLocalTime()}] Sending Transaction ${signature}`);
+
+    // Set up the confirmation retry logic
+    let numberOfRetries = 0;
+    let confirmedTx = null;
+    let status = await connection.getSignatureStatus(signature);
+
+    while (status.value?.confirmationStatus !== "processed"&& status.value?.confirmationStatus !== "confirmed" && status.value?.confirmationStatus !== "finalized") {
+        confirmedTx = await Promise.race([
+            connection.confirmTransaction(
+                { signature, blockhash, lastValidBlockHeight },
+                "confirmed"
+            ),
+            new Promise((resolve) =>
+                setTimeout(() => {
+                    resolve(null);
+                }, 100)
+            ),
+        ]);
+
+        if (confirmedTx) {
+            break;
+        }
+
+        numberOfRetries++;
+
+        // If we've retried too many times, throw an error
+        if (numberOfRetries === 150) {
+
+        }
+
+        // Re-send the transaction
+        signature = await connection.sendRawTransaction(serializedTx, {
+            skipPreflight: true, // Optional
+        });
+        console.log(`[${getCurrentLocalTime()}] Sending Transaction ${signature}`);
+        // Update the status to check again in the next loop
+        status = await connection.getSignatureStatus(signature);
+    }
+
+    // Return the associated token account address
     return associatedTokenAddress;
-
 }
+
+
+
+
+
+
 
 
 export async function wrapSol(
